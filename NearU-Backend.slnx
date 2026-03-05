@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="nearu-backend.client/nearu-backend.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="NearU-Backend.Server/NearU-Backend.Server.csproj" />
+</Solution>

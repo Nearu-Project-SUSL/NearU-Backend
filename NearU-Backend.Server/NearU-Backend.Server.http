@@ -1,0 +1,6 @@
+@NearU_Backend.Server_HostAddress = http://localhost:5241
+
+GET {{NearU_Backend.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
