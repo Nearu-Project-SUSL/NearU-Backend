@@ -1,0 +1,403 @@
+### NearU Backend Authentication Tests
+### Use with Visual Studio's built-in HTTP client or REST Client extension
+
+### Variables
+@baseUrl = https://localhost:5001
+@studentUsername = john_student
+@businessUsername = jane_business
+@riderUsername = mike_rider
+@password = SecurePass123!
+
+################################################################################
+# 1. REGISTRATION TESTS
+################################################################################
+
+### Register Student User
+# @name register_student
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{studentUsername}}",
+  "email": "john@example.com",
+  "password": "{{password}}",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+94771234567",
+  "role": "Student"
+}
+
+###
+
+### Register Business User
+# @name register_business
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{businessUsername}}",
+  "email": "jane@business.com",
+  "password": "{{password}}",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phoneNumber": "+94771234568",
+  "role": "Business"
+}
+
+###
+
+### Register Rider User
+# @name register_rider
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{riderUsername}}",
+  "email": "mike@rider.com",
+  "password": "{{password}}",
+  "firstName": "Mike",
+  "lastName": "Johnson",
+  "phoneNumber": "+94771234569",
+  "role": "Rider"
+}
+
+###
+
+### Test Duplicate Username (Should Fail)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{studentUsername}}",
+  "email": "different@example.com",
+  "password": "{{password}}",
+  "firstName": "Different",
+  "lastName": "User",
+  "role": "Student"
+}
+
+###
+
+### Test Duplicate Email (Should Fail)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "different_username",
+  "email": "john@example.com",
+  "password": "{{password}}",
+  "firstName": "Different",
+  "lastName": "User",
+  "role": "Student"
+}
+
+###
+
+### Test Weak Password (Should Fail)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "weak_user",
+  "email": "weak@example.com",
+  "password": "weak",
+  "firstName": "Weak",
+  "lastName": "User",
+  "role": "Student"
+}
+
+###
+
+################################################################################
+# 2. LOGIN TESTS
+################################################################################
+
+### Login with Username
+# @name login_student
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "{{studentUsername}}",
+  "password": "{{password}}"
+}
+
+###
+
+### Login with Email
+# @name login_student_email
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "john@example.com",
+  "password": "{{password}}"
+}
+
+###
+
+### Login Business
+# @name login_business
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "{{businessUsername}}",
+  "password": "{{password}}"
+}
+
+###
+
+### Login Rider
+# @name login_rider
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "{{riderUsername}}",
+  "password": "{{password}}"
+}
+
+###
+
+### Test Invalid Credentials (Should Fail)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "{{studentUsername}}",
+  "password": "WrongPassword123!"
+}
+
+###
+
+################################################################################
+# 3. PROTECTED ENDPOINTS (Replace tokens from login responses)
+################################################################################
+
+@studentToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+@businessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+@riderToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+@refreshToken = base64encodedtoken...
+
+### Get Current User (Student)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{studentToken}}
+
+###
+
+### Get Current User (Business)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{businessToken}}
+
+###
+
+### Get Current User (Rider)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{riderToken}}
+
+###
+
+### Test No Token (Should Fail 401)
+GET {{baseUrl}}/api/auth/me
+
+###
+
+### Test Invalid Token (Should Fail 401)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer invalid_token_here
+
+###
+
+################################################################################
+# 4. ROLE-BASED AUTHORIZATION TESTS
+################################################################################
+
+### Student Endpoint - With Student Token (Should Work)
+GET {{baseUrl}}/api/auth/student-only
+Authorization: Bearer {{studentToken}}
+
+###
+
+### Student Endpoint - With Business Token (Should Fail 403)
+GET {{baseUrl}}/api/auth/student-only
+Authorization: Bearer {{businessToken}}
+
+###
+
+### Business Endpoint - With Business Token (Should Work)
+GET {{baseUrl}}/api/auth/business-only
+Authorization: Bearer {{businessToken}}
+
+###
+
+### Business Endpoint - With Student Token (Should Fail 403)
+GET {{baseUrl}}/api/auth/business-only
+Authorization: Bearer {{studentToken}}
+
+###
+
+### Rider Endpoint - With Rider Token (Should Work)
+GET {{baseUrl}}/api/auth/rider-only
+Authorization: Bearer {{riderToken}}
+
+###
+
+### Rider Endpoint - With Student Token (Should Fail 403)
+GET {{baseUrl}}/api/auth/rider-only
+Authorization: Bearer {{studentToken}}
+
+###
+
+### Multiple Roles Endpoint - With Student Token (Should Work)
+GET {{baseUrl}}/api/auth/student-or-business
+Authorization: Bearer {{studentToken}}
+
+###
+
+### Multiple Roles Endpoint - With Business Token (Should Work)
+GET {{baseUrl}}/api/auth/student-or-business
+Authorization: Bearer {{businessToken}}
+
+###
+
+### Multiple Roles Endpoint - With Rider Token (Should Fail 403)
+GET {{baseUrl}}/api/auth/student-or-business
+Authorization: Bearer {{riderToken}}
+
+###
+
+### Admin Endpoint - With Student Token (Should Fail 403)
+GET {{baseUrl}}/api/auth/admin-only
+Authorization: Bearer {{studentToken}}
+
+###
+
+################################################################################
+# 5. TOKEN REFRESH TESTS
+################################################################################
+
+### Refresh Access Token
+# @name refresh_token
+POST {{baseUrl}}/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Refresh Token Without Body (Using Cookie - if set)
+POST {{baseUrl}}/api/auth/refresh-token
+Content-Type: application/json
+
+###
+
+### Test Invalid Refresh Token (Should Fail)
+POST {{baseUrl}}/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid_refresh_token_here"
+}
+
+###
+
+################################################################################
+# 6. LOGOUT TESTS
+################################################################################
+
+### Revoke Specific Token (Logout)
+POST {{baseUrl}}/api/auth/revoke-token
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Try Using Revoked Token (Should Fail)
+POST {{baseUrl}}/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Revoke All Tokens (Logout from All Devices)
+POST {{baseUrl}}/api/auth/revoke-all-tokens
+Authorization: Bearer {{studentToken}}
+
+###
+
+################################################################################
+# 7. EDGE CASES & ERROR HANDLING
+################################################################################
+
+### Test Empty Request Body
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{}
+
+###
+
+### Test Missing Required Fields
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "incomplete_user",
+  "email": "incomplete@test.com"
+}
+
+###
+
+### Test Invalid Email Format
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "test_user",
+  "email": "invalid-email-format",
+  "password": "{{password}}",
+  "firstName": "Test",
+  "lastName": "User",
+  "role": "Student"
+}
+
+###
+
+### Test Invalid Role
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "invalid_role_user",
+  "email": "invalid@test.com",
+  "password": "{{password}}",
+  "firstName": "Invalid",
+  "lastName": "Role",
+  "role": "SuperUser"
+}
+
+###
+
+### Test Very Long Username (Should Fail)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "this_is_a_very_long_username_that_exceeds_the_maximum_length_allowed_by_the_system",
+  "email": "longusername@test.com",
+  "password": "{{password}}",
+  "firstName": "Long",
+  "lastName": "Username",
+  "role": "Student"
+}
+
+###
