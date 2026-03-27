@@ -6,7 +6,13 @@ using NearU_Backend_Revised.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using NearU_Backend_Revised.Repositories;
+using NearU_Backend_Revised.Repositories.Interfaces;
+using NearU_Backend_Revised.Services;
+using NearU_Backend_Revised.Services.Interfaces;
 
+builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
+builder.Services.AddScoped<IGiftShopService, GiftShopService>();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
