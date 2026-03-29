@@ -11,48 +11,35 @@ namespace NearU_Backend_Revised.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "FoodShop",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_FoodShop", x => x.Id);
-                });
+            migrationBuilder.Sql(@"
+                CREATE TABLE IF NOT EXISTS ""FoodShop"" (
+                    ""Id"" text NOT NULL,
+                    ""Name"" character varying(100) NOT NULL,
+                    ""Description"" character varying(500) NULL,
+                    ""Address"" character varying(200) NOT NULL,
+                    ""PhoneNumber"" character varying(20) NULL,
+                    ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
+                    CONSTRAINT ""PK_FoodShop"" PRIMARY KEY (""Id"")
+                );
+            ");
 
-            migrationBuilder.CreateTable(
-                name: "MenuItems",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    FoodShopId = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
-                    Price = table.Column<decimal>(type: "numeric(10,2)", nullable: false),
-                    PhotoUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MenuItems", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MenuItems_FoodShop_FoodShopId",
-                        column: x => x.FoodShopId,
-                        principalTable: "FoodShop",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            migrationBuilder.Sql(@"
+                CREATE TABLE IF NOT EXISTS ""MenuItems"" (
+                    ""Id"" text NOT NULL,
+                    ""FoodShopId"" text NOT NULL,
+                    ""Name"" character varying(100) NOT NULL,
+                    ""Description"" character varying(300) NULL,
+                    ""Price"" numeric(10,2) NOT NULL,
+                    ""PhotoUrl"" character varying(500) NULL,
+                    CONSTRAINT ""PK_MenuItems"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_MenuItems_FoodShop_FoodShopId"" FOREIGN KEY (""FoodShopId"")
+                        REFERENCES ""FoodShop"" (""Id"") ON DELETE CASCADE
+                );
+            ");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_MenuItems_FoodShopId",
-                table: "MenuItems",
-                column: "FoodShopId");
+            migrationBuilder.Sql(@"
+                CREATE INDEX IF NOT EXISTS ""IX_MenuItems_FoodShopId"" ON ""MenuItems"" (""FoodShopId"");
+            ");
         }
 
         /// <inheritdoc />
