@@ -10,7 +10,18 @@ using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Configurations;
+using NearU_Backend_Revised.Repositories;
+using NearU_Backend_Revised.Repositories.Interfaces;
+using NearU_Backend_Revised.Services;
+using NearU_Backend_Revised.Services.Interfaces;
 
+builder.Services.Configure<ImageKitSettings>(
+    builder.Configuration.GetSection("ImageKit"));
+
+builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
+builder.Services.AddScoped<IGiftShopService, GiftShopService>();
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
 var builder = WebApplication.CreateBuilder(args);

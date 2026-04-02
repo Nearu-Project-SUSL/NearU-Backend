@@ -31,38 +31,30 @@ namespace NearU_Backend_Revised.Controllers
         {
             var result = await _giftShopService.GetByIdAsync(id);
             if (result == null)
-            {
                 return NotFound(new { message = "Gift shop not found." });
-            }
 
             return Ok(result);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateGiftShopDto dto)
+        public async Task<IActionResult> Create([FromForm] CreateGiftShopDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             var created = await _giftShopService.CreateGiftShopAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateGiftShopDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromForm] UpdateGiftShopDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             var updated = await _giftShopService.UpdateGiftShopAsync(id, dto);
             if (updated == null)
-            {
                 return NotFound(new { message = "Gift shop not found." });
-            }
 
             return Ok(updated);
         }
@@ -72,43 +64,33 @@ namespace NearU_Backend_Revised.Controllers
         {
             var deleted = await _giftShopService.DeleteGiftShopAsync(id);
             if (!deleted)
-            {
                 return NotFound(new { message = "Gift shop not found." });
-            }
 
             return Ok(new { message = "Gift shop deleted successfully." });
         }
 
         [HttpPost("{giftShopId:guid}/products")]
-        public async Task<IActionResult> AddProduct(Guid giftShopId, [FromBody] CreateGiftProductDto dto)
+        public async Task<IActionResult> AddProduct(Guid giftShopId, [FromForm] CreateGiftProductDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             var created = await _giftShopService.AddProductAsync(giftShopId, dto);
             if (created == null)
-            {
                 return NotFound(new { message = "Gift shop not found." });
-            }
 
             return Ok(created);
         }
 
         [HttpPut("products/{productId:guid}")]
-        public async Task<IActionResult> UpdateProduct(Guid productId, [FromBody] UpdateGiftProductDto dto)
+        public async Task<IActionResult> UpdateProduct(Guid productId, [FromForm] UpdateGiftProductDto dto)
         {
             if (!ModelState.IsValid)
-            {
                 return BadRequest(ModelState);
-            }
 
             var updated = await _giftShopService.UpdateProductAsync(productId, dto);
             if (updated == null)
-            {
                 return NotFound(new { message = "Product not found." });
-            }
 
             return Ok(updated);
         }
@@ -118,9 +100,7 @@ namespace NearU_Backend_Revised.Controllers
         {
             var deleted = await _giftShopService.DeleteProductAsync(productId);
             if (!deleted)
-            {
-                return NotFound(new { message = "Product not found." });
-            }
+                return NotFound(new { message = "Product not found " });
 
             return Ok(new { message = "Product deleted successfully." });
         }

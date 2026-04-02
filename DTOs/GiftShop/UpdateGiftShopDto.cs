@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace NearU_Backend_Revised.DTOs.GiftShop
@@ -8,7 +9,7 @@ namespace NearU_Backend_Revised.DTOs.GiftShop
         [MaxLength(150)]
         public string Name { get; set; } = string.Empty;
 
-        public string? ImageUrl { get; set; }
+        public IFormFile? Image { get; set; }
 
         [Required]
         [MaxLength(150)]
