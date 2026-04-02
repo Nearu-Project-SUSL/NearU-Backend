@@ -9,10 +9,14 @@ namespace NearU_Backend_Revised.Services
     public class GiftShopService : IGiftShopService
     {
         private readonly IGiftShopRepository _giftShopRepository;
+        private readonly IImageService _imageService;
 
-        public GiftShopService(IGiftShopRepository giftShopRepository)
+        public GiftShopService(
+            IGiftShopRepository giftShopRepository,
+            IImageService imageService)
         {
             _giftShopRepository = giftShopRepository;
+            _imageService = imageService;
         }
 
         public async Task<IEnumerable<GiftShopResponseDto>> GetAllAsync(string? keyword, string? location, bool? isActive)
@@ -29,10 +33,17 @@ namespace NearU_Backend_Revised.Services
 
         public async Task<GiftShopResponseDto> CreateGiftShopAsync(CreateGiftShopDto dto)
         {
+            string? uploadedImageUrl = null;
+
+            if (dto.Image != null)
+            {
+                uploadedImageUrl = await _imageService.UploadImageAsync(dto.Image, "/gift-shops");
+            }
+
             var giftShop = new GiftShop
             {
                 Name = dto.Name.Trim(),
-                ImageUrl = dto.ImageUrl,
+                ImageUrl = uploadedImageUrl,
                 LocationName = dto.LocationName.Trim(),
                 Phone = dto.Phone.Trim(),
                 Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(),
@@ -54,8 +65,16 @@ namespace NearU_Backend_Revised.Services
             var giftShop = await _giftShopRepository.GetByIdAsync(id);
             if (giftShop == null) return null;
 
+            if (dto.Image != null)
+            {
+                var uploadedImageUrl = await _imageService.UploadImageAsync(dto.Image, "/gift-shops");
+                if (!string.IsNullOrWhiteSpace(uploadedImageUrl))
+                {
+                    giftShop.ImageUrl = uploadedImageUrl;
+                }
+            }
+
             giftShop.Name = dto.Name.Trim();
-            giftShop.ImageUrl = dto.ImageUrl;
             giftShop.LocationName = dto.LocationName.Trim();
             giftShop.Phone = dto.Phone.Trim();
             giftShop.Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
@@ -84,11 +103,18 @@ namespace NearU_Backend_Revised.Services
             var giftShop = await _giftShopRepository.GetByIdAsync(giftShopId);
             if (giftShop == null) return null;
 
+            string? uploadedPhotoUrl = null;
+
+            if (dto.Photo != null)
+            {
+                uploadedPhotoUrl = await _imageService.UploadImageAsync(dto.Photo, "/gift-products");
+            }
+
             var product = new GiftProduct
             {
                 GiftShopId = giftShopId,
                 Name = dto.Name.Trim(),
-                PhotoUrl = dto.PhotoUrl,
+                PhotoUrl = uploadedPhotoUrl,
                 Price = dto.Price,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
@@ -106,8 +132,16 @@ namespace NearU_Backend_Revised.Services
             var product = await _giftShopRepository.GetProductByIdAsync(productId);
             if (product == null) return null;
 
+            if (dto.Photo != null)
+            {
+                var uploadedPhotoUrl = await _imageService.UploadImageAsync(dto.Photo, "/gift-products");
+                if (!string.IsNullOrWhiteSpace(uploadedPhotoUrl))
+                {
+                    product.PhotoUrl = uploadedPhotoUrl;
+                }
+            }
+
             product.Name = dto.Name.Trim();
-            product.PhotoUrl = dto.PhotoUrl;
             product.Price = dto.Price;
             product.IsActive = dto.IsActive;
             product.UpdatedAt = DateTime.UtcNow;
