@@ -1,33 +1,29 @@
 using Microsoft.EntityFrameworkCore;
-using NearU_Backend_Revised.Configuration;
-using NearU_Backend_Revised.Data;
-using NearU_Backend_Revised.Services;
-using NearU_Backend_Revised.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using NearU_Backend_Revised.Repositories;
-using NearU_Backend_Revised.Repositories.Interfaces;
-using NearU_Backend_Revised.Services;
-using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Configurations;
+using NearU_Backend_Revised.Data;
 using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
 
+var builder = WebApplication.CreateBuilder(args);
+
+// ImageKit settings
 builder.Services.Configure<ImageKitSettings>(
     builder.Configuration.GetSection("ImageKit")git );
 
+// Register Gift Shop services
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
-builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
-builder.Services.AddScoped<IGiftShopService, GiftShopService>();
-var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -55,7 +51,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // Set to true in production
+    options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -64,8 +60,10 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings?.Issuer,
         ValidAudience = jwtSettings?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")),
-        ClockSkew = TimeSpan.Zero // Remove default 5 minute clock skew
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
+        ),
+        ClockSkew = TimeSpan.Zero
     };
 });
 
@@ -76,7 +74,7 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
     });
-    
+
     options.AddPolicy("RequireUserId", policy =>
     {
         policy.RequireAuthenticatedUser();
@@ -84,18 +82,22 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-// Configure Database (PostgreSQL only)
+// Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
-        npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null
+        );
         npgsqlOptions.CommandTimeout(30);
     });
 });
 
-// Register repositories and services
+// Register other repositories and services
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
@@ -121,7 +123,8 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
