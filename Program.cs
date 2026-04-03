@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ImageKit settings
 builder.Services.Configure<ImageKitSettings>(
-    builder.Configuration.GetSection("ImageKit")git );
+    builder.Configuration.GetSection("ImageKit"));
 
 // Register Gift Shop services
 builder.Services.AddScoped<IImageService, ImageService>();
