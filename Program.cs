@@ -17,7 +17,7 @@ using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
 
 builder.Services.Configure<ImageKitSettings>(
-    builder.Configuration.GetSection("ImageKit")git );
+    builder.Configuration.GetSection("ImageKit"));
 
 builder.Services.AddScoped<IImageService, ImageService>();
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();

@@ -31,23 +31,23 @@ namespace NearU_Backend_Revised.Services
             return giftShop == null ? null : MapGiftShopToResponse(giftShop);
         }
 
-        public async Task<GiftShopResponseDto> CreateGiftShopAsync(CreateGiftShopDto dto)
+        public async Task<GiftShopResponseDto> CreateGiftShopAsync(CreateGiftShopDto giftShopDto)
         {
             string? uploadedImageUrl = null;
 
-            if (dto.Image != null)
+            if (giftShopDto.Image != null)
             {
-                uploadedImageUrl = await _imageService.UploadImageAsync(dto.Image, "/gift-shops");
+                uploadedImageUrl = await _imageService.UploadImageAsync(giftShopDto.Image, "/gift-shops");
             }
 
             var giftShop = new GiftShop
             {
-                Name = dto.Name.Trim(),
+                Name = giftShopDto.Name.Trim(),
                 ImageUrl = uploadedImageUrl,
-                LocationName = dto.LocationName.Trim(),
-                Phone = dto.Phone.Trim(),
-                Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim(),
-                Address = dto.Address.Trim(),
+                LocationName = giftShopDto.LocationName.Trim(),
+                Phone = giftShopDto.Phone.Trim(),
+                Email = string.IsNullOrWhiteSpace(giftShopDto.Email) ? null : giftShopDto.Email.Trim(),
+                Address = giftShopDto.Address.Trim(),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -60,26 +60,26 @@ namespace NearU_Backend_Revised.Services
             return MapGiftShopToResponse(created!);
         }
 
-        public async Task<GiftShopResponseDto?> UpdateGiftShopAsync(Guid id, UpdateGiftShopDto dto)
+        public async Task<GiftShopResponseDto?> UpdateGiftShopAsync(Guid id, UpdateGiftShopDto giftShopDto)
         {
             var giftShop = await _giftShopRepository.GetByIdAsync(id);
             if (giftShop == null) return null;
 
-            if (dto.Image != null)
+            if (giftShopDto.Image != null)
             {
-                var uploadedImageUrl = await _imageService.UploadImageAsync(dto.Image, "/gift-shops");
+                var uploadedImageUrl = await _imageService.UploadImageAsync(giftShopDto.Image, "/gift-shops");
                 if (!string.IsNullOrWhiteSpace(uploadedImageUrl))
                 {
                     giftShop.ImageUrl = uploadedImageUrl;
                 }
             }
 
-            giftShop.Name = dto.Name.Trim();
-            giftShop.LocationName = dto.LocationName.Trim();
-            giftShop.Phone = dto.Phone.Trim();
-            giftShop.Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
-            giftShop.Address = dto.Address.Trim();
-            giftShop.IsActive = dto.IsActive;
+            giftShop.Name = giftShopDto.Name.Trim();
+            giftShop.LocationName = giftShopDto.LocationName.Trim();
+            giftShop.Phone = giftShopDto.Phone.Trim();
+            giftShop.Email = string.IsNullOrWhiteSpace(giftShopDto.Email) ? null : giftShopDto.Email.Trim();
+            giftShop.Address = giftShopDto.Address.Trim();
+            giftShop.IsActive = giftShopDto.IsActive;
             giftShop.UpdatedAt = DateTime.UtcNow;
 
             _giftShopRepository.UpdateGiftShop(giftShop);
@@ -98,24 +98,24 @@ namespace NearU_Backend_Revised.Services
             return await _giftShopRepository.SaveChangesAsync();
         }
 
-        public async Task<GiftProductResponseDto?> AddProductAsync(Guid giftShopId, CreateGiftProductDto dto)
+        public async Task<GiftProductResponseDto?> AddProductAsync(Guid giftShopId, CreateGiftProductDto giftShopDto)
         {
             var giftShop = await _giftShopRepository.GetByIdAsync(giftShopId);
             if (giftShop == null) return null;
 
             string? uploadedPhotoUrl = null;
 
-            if (dto.Photo != null)
+            if (giftShopDto.Photo != null)
             {
-                uploadedPhotoUrl = await _imageService.UploadImageAsync(dto.Photo, "/gift-products");
+                uploadedPhotoUrl = await _imageService.UploadImageAsync(giftShopDto.Photo, "/gift-products");
             }
 
             var product = new GiftProduct
             {
                 GiftShopId = giftShopId,
-                Name = dto.Name.Trim(),
+                Name = giftShopDto.Name.Trim(),
                 PhotoUrl = uploadedPhotoUrl,
-                Price = dto.Price,
+                Price = giftShopDto.Price,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -127,23 +127,23 @@ namespace NearU_Backend_Revised.Services
             return MapGiftProductToResponse(product);
         }
 
-        public async Task<GiftProductResponseDto?> UpdateProductAsync(Guid productId, UpdateGiftProductDto dto)
+        public async Task<GiftProductResponseDto?> UpdateProductAsync(Guid productId, UpdateGiftProductDto giftShopDto)
         {
             var product = await _giftShopRepository.GetProductByIdAsync(productId);
             if (product == null) return null;
 
-            if (dto.Photo != null)
+            if (giftShopDto.Photo != null)
             {
-                var uploadedPhotoUrl = await _imageService.UploadImageAsync(dto.Photo, "/gift-products");
+                var uploadedPhotoUrl = await _imageService.UploadImageAsync(giftShopDto.Photo, "/gift-products");
                 if (!string.IsNullOrWhiteSpace(uploadedPhotoUrl))
                 {
                     product.PhotoUrl = uploadedPhotoUrl;
                 }
             }
 
-            product.Name = dto.Name.Trim();
-            product.Price = dto.Price;
-            product.IsActive = dto.IsActive;
+            product.Name = giftShopDto.Name.Trim();
+            product.Price = giftShopDto.Price;
+            product.IsActive = giftShopDto.IsActive;
             product.UpdatedAt = DateTime.UtcNow;
 
             _giftShopRepository.UpdateProduct(product);
