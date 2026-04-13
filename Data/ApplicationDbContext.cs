@@ -17,7 +17,9 @@ namespace NearU_Backend_Revised.Data
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<FoodShop> FoodShops { get; set; } = null!;
+        public DbSet<Accommodation> Accommodations { get; set; } = null!;
         public DbSet<MenuItem> MenuItems { get; set; } = null!;
+        public DbSet<AccommodationItem> AccommodationItems { get; set; } = null!;
         public DbSet<Job> Jobs { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -73,6 +75,53 @@ namespace NearU_Backend_Revised.Data
                 // Add other User configurations here as needed
             });
 
+
+            modelBuilder.Entity<Accommodation>(entity =>
+            {
+                entity.HasKey(acc => acc.Id);
+
+                entity.Property(acc => acc.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(acc => acc.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(acc => acc.Address)
+                    .HasMaxLength(200);
+
+                entity.Property(acc => acc.PhoneNumber)
+                   .HasMaxLength(20);
+
+                entity.Property(acc => acc.CreatedAt)
+                    .HasDefaultValueSql("NOW()");
+
+                entity.HasMany(acc => acc.AccommodationItems)
+                    .WithOne(mi => mi.Accommodation)
+                    .HasForeignKey(mi => mi.AccommodationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AccommodationItem>(entity =>
+            {
+                entity.HasKey(mi => mi.Id);
+
+                entity.Property(mi => mi.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(mi => mi.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(mi => mi.Price)
+                    .IsRequired()
+                    .HasColumnType("decimal(10,2)");
+
+                entity.Property(mi => mi.PhotoUrl)
+                    .HasMaxLength(500);
+
+                entity.HasIndex(mi => mi.AccommodationId);
+            });
 
             modelBuilder.Entity<FoodShop>(entity =>
             {

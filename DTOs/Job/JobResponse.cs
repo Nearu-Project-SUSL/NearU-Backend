@@ -26,5 +26,6 @@ namespace NearU_Backend_Revised.DTOs.Job
         public string Name { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string? Avatar { get; set; }
+        public string? MobileNumber { get; set; }
     }
 }

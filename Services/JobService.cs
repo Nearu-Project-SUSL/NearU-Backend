@@ -82,6 +82,7 @@ namespace NearU_Backend_Revised.Services
             var created = await _repository.CreateAsync(job);
             return MapToResponse(created);
         }
+        //Update Created jobs
 
         public async Task<JobResponse?> UpdateJobAsync(string id, UpdateJob dto, string userId)
         {
@@ -154,6 +155,7 @@ namespace NearU_Backend_Revised.Services
                     UserId = job.PostedByUserId,
                     Name = job.PostedByName,
                     Email = job.PostedByUser?.Email ?? "",
+                    MobileNumber = job.PostedByUser?.MobileNumber,
                     Avatar = null
                 },
                 CreatedAt = job.CreatedAt,

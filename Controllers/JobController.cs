@@ -12,10 +12,12 @@ namespace NearU_Backend_Revised.Controllers
     public class JobController : ControllerBase
     {
         private readonly IJobService _jobservice;
+        private readonly IImageService _imageService;
 
-        public JobController(IJobService jobservice)
+        public JobController(IJobService jobservice, IImageService imageService)
         {
             _jobservice = jobservice;
+            _imageService = imageService;
         }
 
         [HttpGet]
@@ -177,6 +179,28 @@ namespace NearU_Backend_Revised.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("upload-logo")]
+        [Authorize]
+        public async Task<IActionResult> UploadLogo(IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return BadRequest(ApiResponse<object>.FailResponse("No file uploaded"));
+
+                var logoUrl = await _imageService.UploadImageAsync(file, "job-logos");
+                return Ok(ApiResponse<object>.SuccessResponse("Logo uploaded successfully", new { url = logoUrl }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.FailResponse($"Upload failed: {ex.Message}"));
             }
         }
     }

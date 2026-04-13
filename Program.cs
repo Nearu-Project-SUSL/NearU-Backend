@@ -53,7 +53,10 @@ builder.Services.AddCors(options =>
               {
                   return origin.StartsWith("http://localhost") ||
                          origin.StartsWith("https://localhost") ||
-                         origin.EndsWith(".up.railway.app");
+                         origin.EndsWith(".up.railway.app") ||
+                         origin.EndsWith(".ondigitalocean.app") ||
+                         origin == "https://near-u-frontend-pi.vercel.app" ||
+                         origin.EndsWith(".vercel.app");
               })
               .AllowAnyHeader()
               .AllowAnyMethod()
@@ -120,6 +123,12 @@ builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
 builder.Services.AddScoped<IFoodShopService, FoodShopService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddScoped<IImageService, ImageService>();
+
+// Accommodation feature
+builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
+builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
+builder.Services.AddScoped<IAccommodationService, AccommodationService>();
+builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
 // Configure Database (PostgreSQL only)
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NearU_Backend_Revised.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NearU_Backend_Revised.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260404194158_AddMobileNumberToUser")]
+    partial class AddMobileNumberToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,76 +24,6 @@ namespace NearU_Backend_Revised.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("PhotoUrl")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Accommodations");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.AccommodationItem", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AccommodationId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PhotoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccommodationId");
-
-                    b.ToTable("AccommodationItems");
-                });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.FoodShop", b =>
                 {
@@ -302,24 +235,12 @@ namespace NearU_Backend_Revised.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
-                    b.Property<string>("City")
-                        .HasColumnType("text");
-
                     b.Property<string>("CreatedDate")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("DateOfBirth")
-                        .HasColumnType("text");
-
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Faculty")
                         .HasColumnType("text");
 
                     b.Property<int>("IsActive")
@@ -339,30 +260,13 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("StudentId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Year")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.AccommodationItem", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.Accommodation", "Accommodation")
-                        .WithMany("AccommodationItems")
-                        .HasForeignKey("AccommodationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Accommodation");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.Job", b =>
@@ -396,11 +300,6 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>
-                {
-                    b.Navigation("AccommodationItems");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.FoodShop", b =>
