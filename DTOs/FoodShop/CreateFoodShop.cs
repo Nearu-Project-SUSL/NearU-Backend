@@ -14,5 +14,7 @@ namespace NearU_Backend_Revised.DTOs.FoodShop
 		public string? PhoneNumber { get; set; }
 
 		public IFormFile? Photo { get; set; }
+
+		public string? Category { get; set; }
     }
 }
