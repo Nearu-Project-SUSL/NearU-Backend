@@ -21,6 +21,8 @@ namespace NearU_Backend_Revised.Models
 
         public string? PhotoUrl { get; set; }
 
+        public string Category { get; set; } = "Other";
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation property for menu items
