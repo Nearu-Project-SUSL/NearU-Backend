@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.FoodShop;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Enums;
 
 namespace NearU_Backend_Revised.Controllers
 {
@@ -14,6 +15,12 @@ namespace NearU_Backend_Revised.Controllers
         public FoodShopController(IFoodShopService service)
         {
             _service = service;
+        }
+
+        [HttpGet("categories")]
+        public IActionResult GetCategories()
+        {
+            return Ok(FoodCategory.AllowedCategories);
         }
 
         [HttpGet]
