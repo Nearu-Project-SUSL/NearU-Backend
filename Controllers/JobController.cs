@@ -21,12 +21,15 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllJobs()
+        public async Task<IActionResult> GetAllJobs([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var jobs = await _jobservice.GetAllJobsAsync();
-                return Ok(ApiResponse<IEnumerable<JobResponse>>.SuccessResponse("Jobs retrieved successfully", jobs));
+                if (page < 1) page = 1;
+                if (pageSize < 1 || pageSize > 100) pageSize = 10;
+
+                var result = await _jobservice.GetAllJobsAsync(page, pageSize);
+                return Ok(ApiResponse<PagedJobResponse>.SuccessResponse("Jobs retrieved successfully", result));
             }
             catch (Exception ex)
             {

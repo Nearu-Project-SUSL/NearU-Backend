@@ -17,10 +17,17 @@ namespace NearU_Backend_Revised.Services
             _repository = repository;
             _userRepository = userRepository;
         }
-        public async Task<IEnumerable<JobResponse>> GetAllJobsAsync()
+        public async Task<PagedJobResponse> GetAllJobsAsync(int page, int pageSize)
         {
-            var jobs = await _repository.GetAllJobsAsync();
-            return jobs.Select(j => MapToResponse(j));
+            var (jobs, totalCount) = await _repository.GetAllJobsAsync(page, pageSize);
+            return new PagedJobResponse
+            {
+                Items = jobs.Select(j => MapToResponse(j)),
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                CurrentPage = page,
+                PageSize = pageSize
+            };
         }
         public async Task<IEnumerable<JobResponse>> GetNewJobsAsync()
         {
