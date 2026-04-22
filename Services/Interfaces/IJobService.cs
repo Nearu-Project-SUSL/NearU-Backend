@@ -4,7 +4,7 @@ namespace NearU_Backend_Revised.Services.Interfaces
 {
     public interface IJobService
     {
-        Task<IEnumerable<JobResponse>> GetAllJobsAsync();
+        Task<PagedJobResponse> GetAllJobsAsync(int page, int pageSize);
         Task<IEnumerable<JobResponse>> GetNewJobsAsync();
         Task<IEnumerable<JobResponse>> GetJobsByCategoryAsync(string category);
         Task<IEnumerable<JobResponse>> GetJobsByTypeAsync(string jobType);
