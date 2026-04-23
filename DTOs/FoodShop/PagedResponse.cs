@@ -1,12 +1,14 @@
-namespace NearU_Backend_Revised.DTO.FoodShop
+namespace NearU_Backend_Revised.DTOs.FoodShop
 {
-  public class PageResponse<T>
+  public class PagedResponse<T>
   {
     public IEnumerable<T> Items {get; set;} = new List<T>(); //real data for this page
 
     public int CurrentPage {get; set;} 
 
     public int PageSize {get; set;}
+
+    public int TotalCount {get; set;}
 
     public int TotalPages {get; set;}
 
