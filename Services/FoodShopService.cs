@@ -17,10 +17,48 @@ namespace NearU_Backend_Revised.Services
             _imageService = imageService;
         }
 
-        public async Task<IEnumerable<FoodShopResponse>> GetAllShopsAsync()
+        public async Task<PagedResponse<FoodShopResponse>> GetAllShopsAsync(
+            int page, 
+            int pageSize, 
+            string? category, 
+            string? search)
         {
-            var shops = await _repository.GetAllAsync();
-            return shops.Select(shop => MapToResponse(shop)); //transform each shop into foodShopData
+            var allshops = await _repository.GetAllAsync(); // get all from repo
+            
+            //apply category filter if provided
+            if(!string.IsNullOrWhiteSpace(category) && category != "All")
+            {
+                allshops = allshops.Where(s => s.Category == category);
+            }
+
+            //apply search filter if provided
+            // StringComparison.OrdinalIgnoreCase = case insensitive
+            if(!string.IsNullOrWhiteSpace(search))
+            {
+                allshops = allshops.Where(s =>
+                s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                (s.Description != null && s.Description.Contains(search, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            var totalCount = allshops.Count(); //count after filter
+
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            //apply pagination - skip items from previous page
+            var pagedShops = allshops
+                .Skip((page-1 * pageSize))
+                .Take(pageSize)
+                .Select(shop => MapToResponse(shop));
+
+            return new PagedResponse<FoodShopResponse>
+            {
+                Items = pagedShops,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            };
         }
 
         public async Task<FoodShopResponse?> GetShopByIdAsync(string id)
