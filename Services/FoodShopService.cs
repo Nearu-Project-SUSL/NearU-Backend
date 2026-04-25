@@ -2,6 +2,7 @@ using NearU_Backend_Revised.DTOs.FoodShop;
 using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Enums;
 
 namespace NearU_Backend_Revised.Services
 {
@@ -39,6 +40,10 @@ namespace NearU_Backend_Revised.Services
                 photoUrl = await _imageService.UploadImageAsync(foodShopData.Photo, "foodshops");
             }
 
+            var category = FoodCategory.IsValid(foodShopData.Category)
+                    ? foodShopData.Category!
+                    : FoodCategory.Default;
+
 
             var shop = new FoodShop
             {
@@ -48,6 +53,7 @@ namespace NearU_Backend_Revised.Services
                 Address = foodShopData.Address,
                 PhoneNumber = foodShopData.PhoneNumber,
                 PhotoUrl = photoUrl,
+                Category = category,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -64,6 +70,11 @@ namespace NearU_Backend_Revised.Services
             shop.Description = foodShopData.Description ?? shop.Description;
             shop.Address = foodShopData.Address ?? shop.Address;
             shop.PhoneNumber = foodShopData.PhoneNumber ?? shop.PhoneNumber;
+
+            if (FoodCategory.IsValid(foodShopData.Category))
+            {
+                shop.Category = foodShopData.Category!;
+            }
 
             if (foodShopData.Photo != null)
             {
@@ -90,6 +101,7 @@ namespace NearU_Backend_Revised.Services
                 Address = shop.Address,
                 PhoneNumber = shop.PhoneNumber,
                 PhotoUrl = shop.PhotoUrl,
+                Category = shop.Category,
                 CreatedAt = shop.CreatedAt,
             };
         }
