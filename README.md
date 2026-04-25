@@ -1,225 +1,176 @@
-"""
-# NearU – Backend API
-
-## Overview
-NearU is a University Lifestyle Hub and Local Business Marketplace designed to connect students with nearby businesses and services.  
-This repository contains the backend RESTful API that powers the NearU platform.
-
-The backend is built using **ASP.NET Core Web API** and provides secure endpoints for user authentication, business management, service discovery, orders, delivery coordination, job postings, and notifications.
-
-It serves as the **core business logic layer** of the system and communicates with the frontend application and the database hosted on Azure.
+<div align="center">
+  <h1>🚀 NearU – Backend API</h1>
+  <p><b>The core backend RESTful API powering the NearU platform: A University Lifestyle Hub and Local Business Marketplace.</b></p>
+  
+  [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+  [![Entity Framework Core](https://img.shields.io/badge/EF_Core-10.0-512BD4?logo=nuget)](https://docs.microsoft.com/en-us/ef/core/)
+  [![Swagger](https://img.shields.io/badge/Swagger-85EA2D?logo=swagger&logoColor=black)](https://swagger.io/)
+  [![JWT](https://img.shields.io/badge/JWT-black?logo=JSON%20web%20tokens)](https://jwt.io/)
+</div>
 
 ---
 
-# Features
+## 📖 Overview
 
-## User Management
-- User registration and authentication
+**NearU** is designed to connect students with nearby businesses and services. This repository contains the backend RESTful API built with **ASP.NET Core 10 Web API**, providing secure endpoints for user authentication, business management, service discovery, orders, delivery coordination, job postings, and notifications.
+
+It serves as the **core business logic layer** of the system, communicating with the frontend application and a PostgreSQL database.
+
+---
+
+## ✨ Features
+
+### 🔐 User Management & Security
+- Registration and secure authentication (ASP.NET Identity + JWT & Refresh Tokens)
 - Role-based access control (Student, Business Owner, Rider, Admin)
-- Profile management
-- Secure password hashing and token-based authentication
+- Password hashing (BCrypt) and API Rate Limiting
 
-## Business Management
+### 🏪 Business Management
 - Create and manage business listings
-- Upload photos and menus
-- Business verification system
-- Business dashboard support
+- Photo and menu uploads (Integrated with ImageKit)
+- Business verification system and dashboard support
 
-## Search & Discovery
-- Search businesses using keywords
-- Filter by category, rating, and location
+### 🔍 Search & Discovery
+- Keyword-based search for businesses
+- Filtering by category, rating, and location
 - Google Maps API integration for location services
 
-## Order Management
-- Place and track orders
-- Order status updates
-- Order history management
-
-## Delivery Coordination
+### 📦 Order & Delivery Coordination
+- Place, track, and manage order history
 - Businesses can create delivery jobs
-- Riders can accept and complete delivery tasks
-- Delivery tracking and history
+- Riders can accept, complete, and track delivery tasks
 
-## Review & Rating System
-- Users can submit reviews with ratings
-- Photo attachments for reviews
+### ⭐ Review & Rating System
+- Users can submit reviews with ratings and photo attachments
 - Business owners can respond to reviews
 
-## Job Board
+### 💼 Job Board
 - Businesses can post part-time jobs
-- Students can apply for jobs
-- Application tracking
-
-## Notifications
-- Email notifications
-- In-app notification support
-- Event-based alerts (orders, jobs, reviews)
-
-## Admin Panel Support
-- User management
-- Business verification
-- Content moderation
-- System monitoring
+- Students can apply and track applications
 
 ---
 
-# Technology Stack
+## 🛠️ Technology Stack
 
-| Layer | Technology |
-|------|-------------|
-| Backend Framework | ASP.NET Core Web API |
-| Language | C# |
-| Database | Azure SQL Database |
-| ORM | Entity Framework Core |
-| Authentication | ASP.NET Identity + JWT |
-| Cloud Platform | Microsoft Azure |
-| File Storage | Azure Blob Storage |
-| API Documentation | Swagger / OpenAPI |
-| Email Service | SendGrid |
+| Component | Technology |
+| :--- | :--- |
+| **Framework** | ASP.NET Core 10 Web API (C#) |
+| **Database** | PostgreSQL (with SQLite fallback) |
+| **ORM** | Entity Framework Core 10 |
+| **Authentication** | JWT (JSON Web Tokens) Bearer |
+| **Storage** | ImageKit |
+| **API Docs** | Swagger / OpenAPI |
+| **Security** | BCrypt.Net, AspNetCoreRateLimit |
 
 ---
 
-# System Architecture
+## 🏗️ System Architecture
 
-Client (React Frontend)
-        |
-        v
-ASP.NET Core Web API
-        |
-        v
-Service Layer (Business Logic)
-        |
-        v
-Repository Layer (Data Access)
-        |
-        v
-Azure SQL Database
+```mermaid
+graph TD
+    Client[Client Frontend App] -->|HTTP/REST| API[ASP.NET Core Web API]
+    API -->|DI| Services[Service Layer / Business Logic]
+    Services -->|DI| Repositories[Repository Layer / Data Access]
+    Repositories -->|EF Core| DB[(PostgreSQL Database)]
+    Services -->|API| ImageKit[ImageKit Storage]
+```
 
 ---
 
-# Project Structure
+## 📂 Project Structure
 
-NearU-Backend
-│
-├── Controllers        # API endpoints
-├── Services           # Business logic
-├── Repositories       # Database access
-├── Models             # Entity models
-├── DTOs               # Data transfer objects
-├── Data               # DbContext and migrations
-├── Middleware         # Authentication & error handling
-├── Configurations     # App configurations
+```text
+NearU-Backend/
+├── Controllers/       # API endpoints mapping to routes
+├── Services/          # Core business logic
+├── Repositories/      # Database access abstraction
+├── Models/            # Database entity models
+├── DTOs/              # Data Transfer Objects
+├── Data/              # EF Core DbContext and Migrations
+├── Middleware/        # Custom pipelines (Auth, Error Handling)
+├── Configuration/     # App configuration setups
+├── Enums/             # Shared enumerations
 └── Program.cs         # Application entry point
+```
 
 ---
 
-# API Documentation
+## 🚀 Getting Started
 
-Swagger is used for API documentation.
+### Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- Visual Studio 2022 / VS Code / JetBrains Rider
+- PostgreSQL Server
 
-After running the project, open:
+### Installation & Setup
 
-http://localhost:5000/swagger
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/nearu-backend.git
+   cd nearu-backend
+   ```
 
-This interface allows developers to:
-- View API endpoints
-- Test requests
-- Understand request/response formats
+2. **Restore dependencies:**
+   ```bash
+   dotnet restore
+   ```
 
----
+3. **Configure the Database:**
+   Update `appsettings.json` or `appsettings.Development.json` with your PostgreSQL credentials:
+   ```json
+   "ConnectionStrings": {
+     "PostgreSQL": "Host=localhost;Port=5432;Database=nearu_db;Username=postgres;Password=YOUR_PASSWORD"
+   },
+   "DatabaseProvider": "PostgreSQL"
+   ```
 
-# Getting Started
+4. **Apply Migrations:**
+   ```bash
+   dotnet ef database update
+   ```
 
-## Prerequisites
-
-Install the following tools:
-
-- .NET 7 SDK
-- Visual Studio or VS Code
-- SQL Server or Azure SQL Database
-- Git
-
----
-
-# Installation
-
-### Clone the repository
-
-git clone https://github.com/yourusername/nearu-backend.git
-
-### Navigate to the project directory
-
-cd nearu-backend
-
-### Restore dependencies
-
-dotnet restore
-
-### Configure the database
-
-Update the **appsettings.json** file with your database connection string.
-
-Example:
-
-"ConnectionStrings": {
-  "DefaultConnection": "Server=YOUR_SERVER;Database=NearUDB;User Id=USERNAME;Password=PASSWORD;"
-}
+5. **Run the Application:**
+   ```bash
+   dotnet run
+   ```
+   *The API will run locally at `http://localhost:5000` or `https://localhost:5001`.*
 
 ---
 
-# Run the Application
+## 📚 API Documentation
 
-dotnet run
+This project uses **Swagger** for interactive API documentation.
+Once the application is running, navigate to:
 
-The API will run at:
-
-https://localhost:5001
-
----
-
-# Database Migration
-
-Run the following command to apply migrations and create database tables:
-
-dotnet ef database update
+```text
+https://localhost:5001/swagger
+```
+Here you can explore all available endpoints, required parameters, authentication requirements, and test requests directly from the browser.
 
 ---
 
-# Security Features
+## 🔒 Security & Performance
 
-- HTTPS with TLS encryption
-- JWT authentication
-- Role-Based Access Control (RBAC)
-- Password hashing
-- SQL Injection protection
-- Input validation and sanitization
-- Rate limiting for API requests
+- **Authentication:** JWT Bearer tokens with Refresh Token rotation.
+- **Authorization:** Role-Based Access Control (RBAC).
+- **Protection:** SQL Injection protection via EF Core parameterized queries, rate limiting via `AspNetCoreRateLimit`, secure password hashing via `BCrypt`.
+- **CORS:** Configured for frontend communication.
 
 ---
 
-# Future Enhancements
-
-- Online payment integration
-- Advanced analytics dashboard
-- AI-based service recommendations
-- Real-time delivery tracking
-- Native mobile application support
-
----
-
-# Contributors
+## 👥 Contributors
 
 **Group 11 – Faculty of Computing**  
-Sabaragamuwa University of Sri Lanka
+*Sabaragamuwa University of Sri Lanka*
 
-- K.W.T.N. Keerthiwansha – Full Stack Developer & System Architect  
-- W.T.M.B. Wijesuriya – Frontend Developer & UI/UX Designer  
-- K.V.P. Pahasara – Cloud & DevOps Engineer  
-- M.U. Heshan – QA Engineer & Project Manager  
+- **K.W.T.N. Keerthiwansha** – Full Stack Developer & System Architect  
+- **W.T.M.B. Wijesuriya** – Frontend Developer & UI/UX Designer  
+- **K.V.P. Pahasara** – Cloud & DevOps Engineer  
+- **M.U. Heshan** – QA Engineer & Project Manager  
 
 ---
 
-# License
+## 📄 License
 
 This project is developed for **academic purposes as part of a university capstone project**.
-"""
