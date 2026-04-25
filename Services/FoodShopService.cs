@@ -47,7 +47,7 @@ namespace NearU_Backend_Revised.Services
 
             //apply pagination - skip items from previous page
             var pagedShops = allshops
-                .Skip((page-1 * pageSize))
+                .Skip((page-1) * pageSize)
                 .Take(pageSize)
                 .Select(shop => MapToResponse(shop));
 
