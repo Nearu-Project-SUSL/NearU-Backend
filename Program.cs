@@ -55,7 +55,6 @@ builder.Services.AddCors(options =>
               {
                   return origin.StartsWith("http://localhost") ||
                          origin.StartsWith("https://localhost") ||
-                         origin.EndsWith(".up.railway.app") || //Need to be removed out dated link
                          origin.EndsWith(".ondigitalocean.app") ||
                          origin == "https://near-u-frontend-pi.vercel.app" ||
                          origin.EndsWith(".vercel.app") ||
