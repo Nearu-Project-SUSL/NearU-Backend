@@ -1,0 +1,38 @@
+# ─────────────────────────────────────────────────────────────
+# NearU Backend — Docker Compose (Droplet Reference)
+#
+# USAGE:
+#   Place this file at /opt/nearu/docker-compose.yml on the Droplet.
+#   Create /opt/nearu/.env with the required secrets (see .env.example).
+#   Ensure the 'nearu-network' Docker network exists:
+#     docker network create nearu-network
+# ─────────────────────────────────────────────────────────────
+
+services:
+  api:
+    image: ghcr.io/nearu-project-susl/nearu-backend:latest
+    container_name: nearu-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      # Database
+      - ConnectionStrings__PostgreSQL=${POSTGRES_CONNECTION_STRING}
+      # JWT
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=NearU-Backend
+      - JwtSettings__Audience=NearU-Client
+      - JwtSettings__AccessTokenExpiryInMinutes=15
+      - JwtSettings__RefreshTokenExpiryInDays=7
+      # ImageKit
+      - ImageKit__PublicKey=${IMAGEKIT_PUBLIC_KEY}
+      - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
+      - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
+    networks:
+      - nearu-network
+
+networks:
+  nearu-network:
+    external: true
