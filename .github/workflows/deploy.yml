@@ -16,7 +16,7 @@ jobs:
   # Job 1: Build & Push Docker Image to GHCR
   # ─────────────────────────────────────────────────────────────
   build-and-push:
-    name: 🐳 Build & Push Image
+    name: Build & Push Image
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -56,7 +56,7 @@ jobs:
   # Job 2: Deploy to DigitalOcean Droplet
   # ─────────────────────────────────────────────────────────────
   deploy:
-    name: 🚀 Deploy to Droplet
+    name: Deploy to Droplet
     runs-on: ubuntu-latest
     needs: build-and-push
 
