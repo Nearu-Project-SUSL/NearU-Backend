@@ -1,0 +1,49 @@
+services:
+  nearu-db:
+    image: postgres:17-alpine
+    container_name: nearu-db
+    restart: always
+    ports:
+      - "54321:5432" # Exposed for team access as requested
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - nearu_db_data:/var/lib/postgresql/data
+    networks:
+      - nearu-internal
+
+  api:
+    image: ghcr.io/nearu-project-susl/nearu-backend:latest
+    container_name: nearu-api
+    restart: unless-stopped
+    depends_on:
+      - nearu-db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__PostgreSQL=Host=nearu-db;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=NearU-Backend
+      - JwtSettings__Audience=NearU-Client
+      - JwtSettings__AccessTokenExpiryInMinutes=15
+      - JwtSettings__RefreshTokenExpiryInDays=7
+      - ImageKit__PublicKey=${IMAGEKIT_PUBLIC_KEY}
+      - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
+      - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
+    networks:
+      - nearu-internal
+      - nearu-proxy
+    # Note: Healthcheck is removed because .NET "Chiseled" images 
+    # do not contain 'curl' or a shell to run the test.
+
+networks:
+  nearu-internal:
+    driver: bridge
+  nearu-proxy:
+    external: true
+    name: nearu-backend_nearu-proxy # Matches your existing Nginx network
+
+volumes:
+  nearu_db_data:

@@ -14,13 +14,12 @@ RUN dotnet build "NearU_Backend_Revised.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "NearU_Backend_Revised.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Final Stage
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
-RUN apt-get update && apt-get install -y libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*
+# Final Stage — chiseled: non-root, minimal footprint, reduced attack surface
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Expose port (Railway uses PORT env var, but ASP.NET defaults to 8080 in .NET 8+)
+# Expose port — ASP.NET defaults to 8080 in .NET 8+
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 

@@ -12,23 +12,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Configure Kestrel to listen on Railway's PORT
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-
-// Log configuration for debugging
-Console.WriteLine("=== Configuration Debug ===");
-Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
-var connStr = builder.Configuration.GetConnectionString("PostgreSQL");
-Console.WriteLine($"ConnectionString exists: {!string.IsNullOrEmpty(connStr)}");
-if (!string.IsNullOrEmpty(connStr)) Console.WriteLine($"ConnectionString preview: {connStr.Substring(0, Math.Min(50, connStr.Length))}...");
-Console.WriteLine($"JWT SecretKey Length: {builder.Configuration["JwtSettings:SecretKey"]?.Length ?? 0}");
-Console.WriteLine($"JWT Issuer: {builder.Configuration["JwtSettings:Issuer"]}");
-Console.WriteLine("===========================");
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
@@ -45,6 +32,9 @@ builder.Services.AddControllers()
         };
     });
 builder.Services.AddOpenApi();
+
+// Health checks — used by the Docker Compose healthcheck directive
+builder.Services.AddHealthChecks();
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -83,10 +73,7 @@ builder.Services.AddRateLimiter(options =>
 // Register JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 if (string.IsNullOrEmpty(jwtSettings?.SecretKey))
-{
-    Console.WriteLine("ERROR: JWT SecretKey is not configured!");
-    throw new InvalidOperationException("JWT SecretKey is not configured. Please set JwtSettings__SecretKey environment variable.");
-}
+    throw new InvalidOperationException("JWT SecretKey is not configured. Set JwtSettings:SecretKey in appsettings or the JwtSettings__SecretKey environment variable.");
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 // Configure JWT Authentication
@@ -112,25 +99,7 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromMinutes(5) // Allow 5 minute clock skew
     };
 
-    // Add events for debugging
-    options.Events = new JwtBearerEvents
-    {
-        OnAuthenticationFailed = context =>
-        {
-            Console.WriteLine($"Authentication failed: {context.Exception.Message}");
-            return Task.CompletedTask;
-        },
-        OnMessageReceived = context =>
-        {
-            Console.WriteLine($"Token received: {(string.IsNullOrEmpty(context.Token) ? "No" : "Yes")}");
-            return Task.CompletedTask;
-        },
-        OnChallenge = context =>
-        {
-            Console.WriteLine($"Authentication challenge: {context.Error}, {context.ErrorDescription}");
-            return Task.CompletedTask;
-        }
-    };
+
 });
 
 // Configure Authorization Policies
@@ -166,13 +135,10 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
-// Configure Database (PostgreSQL only)
+// Configure Database (PostgreSQL)
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrEmpty(connectionString))
-{
-    Console.WriteLine("ERROR: PostgreSQL connection string is not configured!");
-    throw new InvalidOperationException("PostgreSQL connection string is not configured. Please set ConnectionStrings__PostgreSQL environment variable.");
-}
+    throw new InvalidOperationException("PostgreSQL connection string is not configured. Set ConnectionStrings:PostgreSQL in appsettings or the ConnectionStrings__PostgreSQL environment variable.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -219,10 +185,19 @@ if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Trust X-Forwarded-For and X-Forwarded-Proto from Nginx reverse proxy
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
 
 app.Run();

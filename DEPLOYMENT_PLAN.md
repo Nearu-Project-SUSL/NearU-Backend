@@ -2,58 +2,52 @@
 
 This document outlines the step-by-step plan to deploy the NearU Backend to the DigitalOcean Droplet using GitHub Actions, configure it to work behind Nginx, and upgrade the authentication system to use highly secure `HttpOnly` cookies.
 
-## Phase 1: Infrastructure and CI/CD Setup
+## Phase 1: Quality Gate & CI/CD Setup
 
-**Goal:** Establish an automated pipeline that builds a highly efficient Docker image and deploys it to the Droplet upon pushing to the `dev` branch.
+**Goal:** Establish an automated pipeline that validates code quality and builds a highly efficient Docker image for deployment.
 
-1.  **Update `Dockerfile` (Green Coding Initiative):**
+1.  **Automated Testing (The Quality Gate):**
+    *   Create a dedicated xUnit test project (`NearU_Backend.Tests`) to house unit and integration tests.
+    *   **Workflow Integration:** Update the GitHub Actions workflow to include a `test` job that executes `dotnet test`.
+    *   **Strict Dependency:** Configure the `build-and-push` job to depend on the `test` job (`needs: test`). If any test fails, the deployment is automatically aborted.
+
+2.  **Update `Dockerfile` (Green Coding Initiative):**
     *   Modify the existing `Dockerfile` to use the `.NET 10-noble-chiseled` images.
     *   Ensure the correct project file (`NearU_Backend_Revised.csproj`) is referenced.
     *   This reduces the attack surface and significantly lowers the container size.
 
-2.  **Create GitHub Actions Workflow (`.github/workflows/deploy.yml`):**
+3.  **GitHub Actions Workflow (`.github/workflows/deploy.yml`):**
     *   Set up the workflow to trigger on pushes to the `dev` branch.
-    *   **Build Job:** Authenticate with GitHub Container Registry (GHCR), build the Docker image, and push it tagged as `latest`.
-    *   **Deploy Job:** Use SSH to connect to the Droplet (`152.42.227.133`), pull the new image via `docker compose pull`, and restart the service using `docker compose up -d`.
+    *   **Test Job:** Restore, build, and run tests.
+    *   **Build Job:** (Depends on Test) Authenticate with GHCR, build the Docker image, and push it tagged as `latest`.
+    *   **Deploy Job:** (Depends on Build) SSH into the Droplet (`152.42.227.133`) to pull and restart the container.
 
-3.  **Configure GitHub Secrets:**
-    *   Ensure the following repository secrets are set before pushing:
-        *   `DROPLET_IP`: `152.42.227.133`
-        *   `SSH_PRIVATE_KEY`: The private SSH key for Droplet access.
-        *   `GH_PAT`: Personal Access Token with `write:packages` permission.
+4.  **Configure GitHub Secrets:**
+    *   Ensure `DROPLET_IP`, `SSH_PRIVATE_KEY`, and `GH_PAT` are configured in repository settings.
 
 ## Phase 2: Application Configuration for Nginx
 
 **Goal:** Ensure ASP.NET Core understands it is running behind an Nginx reverse proxy with SSL termination.
 
 1.  **Add Forwarded Headers Middleware (`Program.cs`):**
-    *   Since Nginx handles HTTPS and forwards traffic via HTTP to the container, ASP.NET must trust Nginx's headers to know the original request scheme.
-    *   Implement `app.UseForwardedHeaders(...)` configuring `X-Forwarded-For` and `X-Forwarded-Proto`.
-    *   This is crucial for generating correct redirect URIs and secure cookies.
+    *   Implement `app.UseForwardedHeaders(...)` to trust `X-Forwarded-For` and `X-Forwarded-Proto` from Nginx.
+    *   This is critical for generating correct secure cookies and handling HTTPS context correctly.
 
 ## Phase 3: Security Upgrade - HttpOnly Cookies
 
-**Goal:** Migrate from storing JWTs in `localStorage` to using highly secure `HttpOnly` cookies to prevent XSS attacks.
+**Goal:** Migrate from `localStorage` to `HttpOnly` cookies to prevent XSS attacks.
 
 1.  **Update Authentication Endpoints (`Controllers/AuthController.cs`):**
-    *   Modify `Login` and `RefreshToken` endpoints. Instead of returning the `AccessToken` and `RefreshToken` in the JSON response body, append them to the response cookies using `Response.Cookies.Append`.
-    *   Configure cookie options: `HttpOnly = true`, `Secure = true` (required since we are on `https://api.nearusab.me`), and `SameSite = SameSiteMode.None` (if frontend is on Vercel) or `SameSiteMode.Lax` (if frontend shares the `.nearusab.me` domain).
-    *   Modify the `Logout` endpoint to clear these cookies by setting their expiration date to the past.
+    *   Modify `Login` and `RefreshToken` to append tokens to response cookies via `Response.Cookies.Append`.
+    *   Settings: `HttpOnly = true`, `Secure = true`, and `SameSite = SameSiteMode.None` (for cross-domain) or `Lax`.
+    *   Modify `Logout` to clear these cookies.
 
 2.  **Update JWT Configuration (`Program.cs`):**
-    *   Modify the `AddJwtBearer` configuration.
-    *   Add logic within the `OnMessageReceived` event to extract the JWT from the incoming request's cookies instead of expecting it in the `Authorization` header.
+    *   Configure `AddJwtBearer` to extract tokens from cookies in the `OnMessageReceived` event.
 
 ## Phase 4: Execution Strategy
 
-Once the code changes in Phases 1-3 are ready:
-
-1.  **Commit and Push:** Push all changes to the `dev` branch.
-    ```bash
-    git add .
-    git commit -m "feat: setup CI/CD, Nginx headers, and HttpOnly cookies"
-    git push origin dev
-    ```
-2.  **Monitor Actions:** Watch the GitHub Actions tab to ensure the build and deploy jobs succeed.
-3.  **Verify Deployment:** The **502 Bad Gateway** at `https://api.nearusab.me` should resolve to a successful response.
-4.  **Frontend Update:** Coordinate with the frontend team to update Axios configuration (`withCredentials: true`) and remove `localStorage` token management.
+1.  **Commit and Push:** Push all architectural and testing changes to the `dev` branch.
+2.  **Monitor Actions:** Verify the `test` job passes before the `build` and `deploy` jobs execute.
+3.  **Verify Deployment:** Confirm `https://api.nearusab.me` is live and tokens are being set as `HttpOnly` cookies in the browser.
+4.  **Frontend Update:** Set `withCredentials: true` in Axios and remove local storage logic.
