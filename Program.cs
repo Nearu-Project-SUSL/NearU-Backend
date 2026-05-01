@@ -49,7 +49,8 @@ builder.Services.AddCors(options =>
                          origin == "https://near-u-frontend-pi.vercel.app" ||
                          origin.EndsWith(".vercel.app") ||
                          origin == "https://nearusab.me" ||
-                         origin == "https://www.nearusab.me";
+                         origin == "https://www.nearusab.me" ||
+                         origin == "https://api.nearusab.me";
               })
               .AllowAnyHeader()
               .AllowAnyMethod()

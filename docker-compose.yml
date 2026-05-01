@@ -25,7 +25,7 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__PostgreSQL=Host=nearu-db;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
-      - JwtSettings__Issuer=NearU-Backend
+      - JwtSettings__Issuer=https://api.nearusab.me
       - JwtSettings__Audience=NearU-Client
       - JwtSettings__AccessTokenExpiryInMinutes=15
       - JwtSettings__RefreshTokenExpiryInDays=7
