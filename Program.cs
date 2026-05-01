@@ -33,6 +33,9 @@ builder.Services.AddControllers()
     });
 builder.Services.AddOpenApi();
 
+// Health checks — used by the Docker Compose healthcheck directive
+builder.Services.AddHealthChecks();
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -193,5 +196,8 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
 
 app.Run();
