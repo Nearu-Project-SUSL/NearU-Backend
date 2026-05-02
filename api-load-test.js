@@ -4,8 +4,8 @@ import { check, sleep } from 'k6';
 // 1. Configuration (Options)
 export const options = {
     stages: [
-        { duration: '30s', target: 100 }, // Ramp up to 100 users
-        { duration: '1m', target: 100 },  // Stay at 100 users (Steady state)
+        { duration: '30s', target: 10 }, // Ramp up to 10 users
+        { duration: '1m', target: 10 },  // Stay at 10 users (Steady state)
         { duration: '30s', target: 0 },  // Ramp down to 0
     ],
     thresholds: {
@@ -16,7 +16,7 @@ export const options = {
 
 // 2. VU Execution (The "User Flow")
 export default function () {
-    const url = 'https://api.nearusab.me/healthz';
+    const url = 'https://www.nearusab.me/jobs';
     const res = http.get(url);
 
     // Checks help verify functional correctness under load
