@@ -187,7 +187,8 @@ namespace NearU_Backend_Revised.Controllers
 
         [HttpPost("upload-logo")]
         [Authorize]
-        public async Task<IActionResult> UploadLogo(IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadLogo([FromForm] IFormFile file)
         {
             try
             {
