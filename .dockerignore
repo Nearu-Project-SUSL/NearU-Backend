@@ -23,6 +23,9 @@
 # Test project — not included in the production image
 NearU_Backend.Tests/
 
+# Benchmark project — not included in the production image
+NearU.Benchmarks/
+
 # Secrets & environment files — must NEVER enter the image
 .env
 .env.*
