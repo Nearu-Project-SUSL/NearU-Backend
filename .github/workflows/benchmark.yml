@@ -71,15 +71,21 @@ jobs:
             --no-restore
 
       # ── 6. Locate the generated JSON report ───────────────────────────────
-      # BenchmarkDotNet writes artifacts to BenchmarkDotNet.Artifacts/results/
-      # relative to the project directory.
+      # BenchmarkDotNet writes artifacts relative to the CWD of the running
+      # process. Since dotnet run --project runs from the REPO ROOT, the
+      # artifacts land at ./BenchmarkDotNet.Artifacts/ (not inside NearU.Benchmarks/).
       - name: Locate benchmark JSON report
         id: find_report
         run: |
-          REPORT=$(find NearU.Benchmarks/BenchmarkDotNet.Artifacts/results \
-            -name "*-report-full.json" | head -1)
+          REPORT=$(find BenchmarkDotNet.Artifacts/results \
+            -name "*-report-full.json" 2>/dev/null | head -1)
+          if [ -z "$REPORT" ]; then
+            echo "❌ No benchmark JSON report found. Listing artifacts dir:"
+            find BenchmarkDotNet.Artifacts -type f 2>/dev/null || echo "(directory does not exist)"
+            exit 1
+          fi
           echo "report_path=$REPORT" >> "$GITHUB_OUTPUT"
-          echo "Found report at: $REPORT"
+          echo "✅ Found report at: $REPORT"
 
       # ── 7. Upload raw artifacts (always, even on failure) ─────────────────
       - name: Upload benchmark artifacts
@@ -87,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ github.run_number }}
-          path: NearU.Benchmarks/BenchmarkDotNet.Artifacts/
+          path: BenchmarkDotNet.Artifacts/
           retention-days: 90
 
       # ── 8. Store results + trend chart + PR alert ─────────────────────────
