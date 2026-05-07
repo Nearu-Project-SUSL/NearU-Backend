@@ -60,17 +60,15 @@ jobs:
       # ── 5. Run Benchmarks ──────────────────────────────────────────────────
       # BENCHMARK_JOB=short → BenchmarkConfig uses Job.ShortRun in CI
       # (fewer warmup/iteration counts keeps pipeline time under ~4 minutes)
-      #
-      # NOTE: We cd into the project directory before running to avoid a
-      # Linux-specific MSB3024 error. On Linux, the apphost executable is
-      # named "NearU.Benchmarks" (no .exe extension), which conflicts with
-      # the project folder of the same name when building from the repo root.
+      # UseAppHost=false in the csproj prevents the Linux MSB3024 error where
+      # the "NearU.Benchmarks" apphost file conflicts with the folder of the same name.
       - name: Run Benchmarks
         env:
           BENCHMARK_JOB: short
         run: |
-          cd NearU.Benchmarks
-          dotnet run -c Release --no-restore
+          dotnet run -c Release \
+            --project NearU.Benchmarks/NearU.Benchmarks.csproj \
+            --no-restore
 
       # ── 6. Locate the generated JSON report ───────────────────────────────
       # BenchmarkDotNet writes artifacts to BenchmarkDotNet.Artifacts/results/

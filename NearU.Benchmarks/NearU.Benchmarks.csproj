@@ -6,22 +6,28 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
-    <!-- Benchmarks must be built in Release mode to get accurate results -->
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+    <!--
+      UseAppHost=false: prevents MSB3024/MSB3030 on Linux where the native
+      executable would be named "NearU.Benchmarks" (no .exe), colliding with
+      the project folder of the same name. dotnet run still works via the
+      managed dotnet host.
 
-  <!-- Reference the main API project so we can benchmark real service logic -->
-  <ItemGroup>
-    <ProjectReference Include="../NearU_Backend_Revised.csproj" />
-  </ItemGroup>
+      No ProjectReference to the main web project: pulling in a Web SDK project
+      causes MSBuild to copy web outputs (appsettings.json, apphost, etc.)
+      into the benchmark output directory, producing nested path conflicts.
+      All types the benchmarks need are either inline DTOs or direct NuGet
+      packages listed below.
+    -->
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <!-- Required for the [MemoryDiagnoser] attribute to report allocations -->
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
-    <!-- BCrypt is used directly in the benchmark; all other packages come
-         transitively from the main project reference above. -->
+    <!-- BCrypt — benchmarks the password-verification hot path -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+    <!-- JWT — benchmarks the token-generation hot path -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
   </ItemGroup>
 
 </Project>
