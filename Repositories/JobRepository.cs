@@ -7,6 +7,7 @@ namespace NearU_Backend_Revised.Repositories
 {
     public class JobRepository : IJobRepository
     {
+        private static readonly TimeSpan NewJobWindow = TimeSpan.FromHours(24);
         private readonly ApplicationDbContext _context;
 
         public JobRepository(ApplicationDbContext context)
@@ -32,9 +33,11 @@ namespace NearU_Backend_Revised.Repositories
 
         public async Task<IEnumerable<Job>> GetNewJobsAsync()
         {
+            var cutoff = DateTime.UtcNow - NewJobWindow;
+
             return await _context.Jobs
                 .Include(j => j.PostedByUser)
-                .Where(j => j.IsNew)
+                .Where(j => j.IsNew && j.CreatedAt >= cutoff)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
         }

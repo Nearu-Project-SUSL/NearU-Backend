@@ -9,6 +9,7 @@ namespace NearU_Backend_Revised.Services
 {
     public class JobService : IJobService
     {
+        private static readonly TimeSpan NewJobWindow = TimeSpan.FromHours(24);
         private readonly IJobRepository _repository;
         private readonly UserRepository _userRepository;
 
@@ -156,7 +157,7 @@ namespace NearU_Backend_Revised.Services
                 LongDescription = job.LongDescription,
                 Requirements = requirements,
                 Tags = tags,
-                IsNew = job.IsNew,
+                IsNew = IsJobNew(job),
                 PostedBy = new PostedByInfo
                 {
                     UserId = job.PostedByUserId,
@@ -169,6 +170,12 @@ namespace NearU_Backend_Revised.Services
                 PostedAt = GetRelativeTime(job.CreatedAt)
             };
         }
+
+        private static bool IsJobNew(Job job)
+        {
+            return job.IsNew && DateTime.UtcNow - job.CreatedAt <= NewJobWindow;
+        }
+
         private static string GetRelativeTime(DateTime dateTime)
         {
             var timeSpan = DateTime.UtcNow - dateTime;
