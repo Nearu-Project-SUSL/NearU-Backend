@@ -119,7 +119,6 @@ jobs:
           fail-on-alert: true
 
           # Push the updated data.js to the gh-pages branch so the chart
-          # at https://<org>.github.io/<repo>/dev/bench/ stays current
+          # at https://<org>.github.io/<repo>/ stays current
           auto-push: true
           gh-pages-branch: gh-pages
-          benchmark-data-dir-path: dev/bench
