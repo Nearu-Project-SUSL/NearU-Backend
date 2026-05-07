@@ -1,0 +1,117 @@
+name: ⚡ Performance Benchmarks
+
+# ─────────────────────────────────────────────────────────────────────────────
+# When this runs:
+#   • Every push to `dev` that touches benchmark or backend code  (fast feedback)
+#   • On a schedule every Sunday at 02:00 UTC                      (weekly trend)
+#   • Manually via workflow_dispatch                                (on demand)
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [ dev ]
+    paths:
+      - 'NearU.Benchmarks/**'
+      - 'Services/**'
+      - 'Repositories/**'
+      - 'Controllers/**'
+      - '*.csproj'
+  schedule:
+    - cron: '0 2 * * 0'   # Every Sunday at 02:00 UTC
+  workflow_dispatch:       # Allow manual trigger from GitHub UI
+
+# Needed so the benchmark action can push results to gh-pages
+permissions:
+  contents: write
+  deployments: write
+  pull-requests: write
+
+jobs:
+  benchmark:
+    name: Run & Store Benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Setup .NET 10 ───────────────────────────────────────────────────
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      # ── 3. Cache NuGet packages ────────────────────────────────────────────
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-bench-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-bench-
+            ${{ runner.os }}-nuget-
+
+      # ── 4. Restore all projects ────────────────────────────────────────────
+      - name: Restore dependencies
+        run: |
+          dotnet restore NearU_Backend_Revised.csproj
+          dotnet restore NearU.Benchmarks/NearU.Benchmarks.csproj
+
+      # ── 5. Run Benchmarks ──────────────────────────────────────────────────
+      # BENCHMARK_JOB=short → BenchmarkConfig uses Job.Short in CI
+      # (fewer warmup/iteration counts keeps pipeline time under ~4 minutes)
+      - name: Run Benchmarks
+        env:
+          BENCHMARK_JOB: short
+        run: |
+          dotnet run -c Release \
+            --project NearU.Benchmarks/NearU.Benchmarks.csproj \
+            --no-restore
+
+      # ── 6. Locate the generated JSON report ───────────────────────────────
+      # BenchmarkDotNet writes artifacts to BenchmarkDotNet.Artifacts/results/
+      # relative to the project directory.
+      - name: Locate benchmark JSON report
+        id: find_report
+        run: |
+          REPORT=$(find NearU.Benchmarks/BenchmarkDotNet.Artifacts/results \
+            -name "*-report-full.json" | head -1)
+          echo "report_path=$REPORT" >> "$GITHUB_OUTPUT"
+          echo "Found report at: $REPORT"
+
+      # ── 7. Upload raw artifacts (always, even on failure) ─────────────────
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: NearU.Benchmarks/BenchmarkDotNet.Artifacts/
+          retention-days: 90
+
+      # ── 8. Store results + trend chart + PR alert ─────────────────────────
+      # benchmark-action/github-action-benchmark:
+      #   • Appends the result to a JSON data file on the `gh-pages` branch
+      #   • Generates a trend chart visible at your GitHub Pages URL
+      #   • Posts a PR comment when a benchmark regresses beyond the threshold
+      - name: Store and Compare Benchmarks
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'benchmarkdotnet'
+          output-file-path: ${{ steps.find_report.outputs.report_path }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Post a comment on the PR / commit when a metric gets worse
+          comment-on-alert: true
+          alert-comment-cc-users: '@${{ github.actor }}'
+
+          # Alert when a benchmark is ≥ 20 % slower than the stored baseline
+          alert-threshold: '120%'
+
+          # Fail the workflow step (and block the merge) on regression
+          fail-on-alert: true
+
+          # Push the updated data.js to the gh-pages branch so the chart
+          # at https://<org>.github.io/<repo>/dev/bench/ stays current
+          auto-push: true
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: dev/bench
