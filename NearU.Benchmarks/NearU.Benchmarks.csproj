@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <!-- Benchmarks must be built in Release mode to get accurate results -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Reference the main API project so we can benchmark real service logic -->
+  <ItemGroup>
+    <ProjectReference Include="../NearU_Backend_Revised.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <!-- Required for the [MemoryDiagnoser] attribute to report allocations -->
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" Condition="$([MSBuild]::IsOsPlatform('Windows'))" />
+    <!-- BCrypt is used directly in the benchmark; all other packages come
+         transitively from the main project reference above. -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+  </ItemGroup>
+
+</Project>
