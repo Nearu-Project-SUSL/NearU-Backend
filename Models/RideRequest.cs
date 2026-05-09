@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NetTopologySuite.Geometries; // Point type comes from here
 
 namespace NearU_Backend_Revised.Models
 {
@@ -18,17 +19,12 @@ namespace NearU_Backend_Revised.Models
 
         public string? Details { get; set; }
 
+        // Point stores both lat and lon together as a PostGIS geography column
+        // SRID 4326 = standard GPS coordinate system (WGS84)
         [Required]
-        public double PickupLat { get; set; }
-
+        public Point PickupLocation {get; set;} = null!;
         [Required]
-        public double PickupLon { get; set; }
-
-        [Required]
-        public double DropoffLat { get; set; }
-
-        [Required]
-        public double DropoffLon { get; set; }
+        public Point DropoffLocation {get; set;} = null!;
 
         [MaxLength(10)]
         public string Status { get; set; } = "Pending"; // Pending, Accepted, Completed, Expired

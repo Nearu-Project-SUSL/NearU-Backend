@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NearU_Backend_Revised.Data;
 using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories.Interfaces;
+using NetTopologySuite.Geometries;
 
 namespace NearU_Backend_Revised.Repositories
 {
@@ -52,6 +53,16 @@ namespace NearU_Backend_Revised.Repositories
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
+        }
+
+        // Uses EF Core's built-in IsWithinDistance which translates to
+        // PostGIS ST_DWithin(geography, geography, meters) in the actual SQL query
+        public async Task<bool> IsWithinUniversityRadiusAsync(
+            Point pickup, Point university, double radiusMeters)
+        {
+            return await _context.RideRequests
+                .Where(r => pickup.IsWithinDistance(university, radiusMeters))
+                .AnyAsync();
         }
     }
 }
