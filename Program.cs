@@ -144,6 +144,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
+        npgsqlOptions.UseNetTopologySuite();
         npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
         npgsqlOptions.CommandTimeout(30);
     });
@@ -156,6 +157,34 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
+
+// Configure RideSettings
+builder.Services.Configure<NearU_Backend.Configuration.RideSettings>(
+    builder.Configuration.GetSection("RideSettings")
+);
+
+// Redis Integration
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnectionString;
+    options.InstanceName = "NearU_";
+});
+
+// Firebase Admin Setup
+var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
+if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(firebaseCredentialsPath))
+{
+#pragma warning disable CS0618
+    using (var stream = new System.IO.FileStream(firebaseCredentialsPath, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+    {
+        FirebaseAdmin.FirebaseApp.Create(new FirebaseAdmin.AppOptions
+        {
+            Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(stream)
+        });
+    }
+#pragma warning restore CS0618
+}
 
 
 var app = builder.Build();
