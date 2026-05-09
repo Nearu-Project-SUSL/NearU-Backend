@@ -164,7 +164,9 @@ builder.Services.Configure<NearU_Backend.Configuration.RideSettings>(
 );
 
 // Redis Integration
-var redisConnectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (string.IsNullOrWhiteSpace(redisConnectionString))
+    throw new InvalidOperationException("Redis connection string is not configured. Set ConnectionStrings:Redis in appsettings or the ConnectionStrings__Redis environment variable.");
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = redisConnectionString;
