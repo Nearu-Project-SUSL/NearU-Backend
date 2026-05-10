@@ -146,6 +146,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
         npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
         npgsqlOptions.CommandTimeout(30);
+        npgsqlOptions.UseNetTopologySuite(); //tells EF to map Point type to PostGIS geography
     });
 });
 

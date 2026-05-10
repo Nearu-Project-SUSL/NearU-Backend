@@ -1,4 +1,6 @@
 using NearU_Backend_Revised.Models;
+using NetTopologySuite.Geometries;
+
 
 namespace NearU_Backend_Revised.Repositories.Interfaces
 {
@@ -10,5 +12,6 @@ namespace NearU_Backend_Revised.Repositories.Interfaces
         Task<RideRequest?> UpdateAsync(RideRequest ride);
         Task<IEnumerable<RideRequest>> GetPendingOlderThanAsync(DateTime cutoff);
         Task<int> SaveChangesAsync();
+        Task<bool> IsWithinUniversityRadiusAsync(Point pickup, Point university, double radiusMeters);
     }
 }
