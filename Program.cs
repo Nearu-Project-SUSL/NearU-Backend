@@ -165,13 +165,19 @@ builder.Services.Configure<NearU_Backend.Configuration.RideSettings>(
 
 // Redis Integration
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
-if (string.IsNullOrWhiteSpace(redisConnectionString))
-    throw new InvalidOperationException("Redis connection string is not configured. Set ConnectionStrings:Redis in appsettings or the ConnectionStrings__Redis environment variable.");
-builder.Services.AddStackExchangeRedisCache(options =>
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
 {
-    options.Configuration = redisConnectionString;
-    options.InstanceName = "NearU_";
-});
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "NearU_";
+    });
+}
+else
+{
+    // Fallback to in-memory cache if Redis is not configured
+    builder.Services.AddDistributedMemoryCache();
+}
 
 // Firebase Admin Setup
 var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
@@ -222,6 +228,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
+
+app.UseRouting();
 
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
