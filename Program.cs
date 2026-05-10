@@ -45,7 +45,6 @@ builder.Services.AddCors(options =>
               {
                   return origin.StartsWith("http://localhost") ||
                          origin.StartsWith("https://localhost") ||
-                         origin.EndsWith(".ondigitalocean.app") ||
                          origin == "https://near-u-frontend-pi.vercel.app" ||
                          origin.EndsWith(".vercel.app") ||
                          origin == "https://nearusab.me" ||
