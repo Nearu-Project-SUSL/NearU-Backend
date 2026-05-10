@@ -1,4 +1,4 @@
-namespace NearU_Backend.Constants
+namespace NearU_Backend_Revised.Constants
 {
     public static class RideConstants
     {
