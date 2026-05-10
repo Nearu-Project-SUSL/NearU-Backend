@@ -34,7 +34,6 @@ builder.Services.AddControllers()
         };
     });
 builder.Services.AddOpenApi();
-builder.Services.AddSignalR();
 
 // Health checks — used by the Docker Compose healthcheck directive
 builder.Services.AddHealthChecks();
@@ -180,11 +179,20 @@ if (!string.IsNullOrWhiteSpace(redisConnectionString))
         options.Configuration = redisConnectionString;
         options.InstanceName = "NearU_";
     });
+    
+    // Add SignalR with Redis Backplane
+    builder.Services.AddSignalR().AddStackExchangeRedis(redisConnectionString, options => 
+    {
+        options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NearU_SignalR");
+    });
 }
 else
 {
     // Fallback to in-memory cache if Redis is not configured
     builder.Services.AddDistributedMemoryCache();
+    
+    // Fallback to standard SignalR without backplane
+    builder.Services.AddSignalR();
 }
 
 // Firebase Admin Setup
@@ -244,7 +252,11 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<RidesHub>("/hubs/rides");
+app.MapHub<RidesHub>("/hubs/rides", options =>
+{
+    // Enable stateful reconnects to handle clients losing connection temporarily
+    options.AllowStatefulReconnects = true;
+});
 
 // Health check endpoint — polled by Docker every 30 seconds
 app.MapHealthChecks("/healthz");
