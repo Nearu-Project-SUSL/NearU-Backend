@@ -12,8 +12,10 @@
 
   <!-- Exclude the test project directory from the main build -->
   <ItemGroup>
-    <Compile Remove="NearU_Backend.Tests/**" />
-    <Compile Remove="NearU.Benchmarks/**" />
+    <Compile Remove="NearU_Backend.Tests\**" />
+    <Compile Remove="NearU.Benchmarks\**" />
+    <Content Remove="NearU_Backend.Tests\**" />
+    <Content Remove="NearU.Benchmarks\**" />
   </ItemGroup>
 
   <ItemGroup>

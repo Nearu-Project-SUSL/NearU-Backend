@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
+using NearU_Backend_Revised.BackgroundServices;
+using NearU_Backend_Revised.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +34,7 @@ builder.Services.AddControllers()
         };
     });
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 
 // Health checks — used by the Docker Compose healthcheck directive
 builder.Services.AddHealthChecks();
@@ -159,9 +162,14 @@ builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
 // Configure RideSettings
-builder.Services.Configure<NearU_Backend.Configuration.RideSettings>(
-    builder.Configuration.GetSection("RideSettings")
-);
+builder.Services.Configure<RideSettings>(
+    builder.Configuration.GetSection("RideSettings"));
+
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
+builder.Services.AddScoped<IRideNotificationService, RideNotificationService>();
+builder.Services.AddHostedService<GhostRiderCleanupWorker>();
+builder.Services.AddHostedService<RideLifecycleWorker>();
 
 // Redis Integration
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
@@ -236,6 +244,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<RidesHub>("/hubs/rides");
 
 // Health check endpoint — polled by Docker every 30 seconds
 app.MapHealthChecks("/healthz");
