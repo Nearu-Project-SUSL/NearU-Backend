@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778321004483,
+  "lastUpdate": 1778391496960,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -104,6 +104,56 @@ window.BENCHMARK_DATA = {
             "value": 446.72450494766235,
             "unit": "ns",
             "range": "± 2.9254027549479495"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Thimira Niranjaya",
+            "email": "Thimira Niranjaya"
+          },
+          "committer": {
+            "name": "Thimira Niranjaya",
+            "email": "Thimira Niranjaya"
+          },
+          "id": "0e2d086e075c095e817eb4bba6e178f2a649bafe",
+          "message": "chore: revert benchmark publish path back to dev/bench/",
+          "timestamp": "2026-05-09T10:01:25Z",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/0e2d086e075c095e817eb4bba6e178f2a649bafe"
+        },
+        "date": 1778391496264,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 6818.558848063151,
+            "unit": "ns",
+            "range": "± 63.311011864002815"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146524241,
+            "unit": "ns",
+            "range": "± 73791.75598940575"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15079.151743570963,
+            "unit": "ns",
+            "range": "± 143.5008908825118"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1253.3295466105144,
+            "unit": "ns",
+            "range": "± 3.265752008190503"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 440.7244880994161,
+            "unit": "ns",
+            "range": "± 11.4782788401536"
           }
         ]
       }
