@@ -173,7 +173,7 @@ From here, you can explore all available endpoints, required parameters, schema 
 - **Rate Limiting:** API endpoint throttling via `AspNetCoreRateLimit` to prevent abuse.
 - **Password Security:** Secure hashing mechanism using `BCrypt`.
 - **CORS:** Properly configured for secure frontend-backend communication.
-- **Benchmark Results:** https://nearu-project-susl.github.io/NearU-Backend/dev/bench/
+- **Benchmark Results:** View performance metrics and trend reports at [NearU benchmark page](https://nearu-project-susl.github.io/NearU-Backend/dev/bench/).
 
 ---
 
