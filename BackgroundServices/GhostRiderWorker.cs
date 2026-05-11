@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Client;
 using NearU_Backend_Revised.Data;
 
 namespace NearU_Backend_Revised.BackgroundServices
@@ -7,7 +6,7 @@ namespace NearU_Backend_Revised.BackgroundServices
   public class GhostRiderWorker : BackgroundService
   {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<GhostRiderWorker> _logger;
+    private readonly ILogger<GhostRiderWorker> _logger; // to log msg to console/log files
 
     public GhostRiderWorker(IServiceScopeFactory scopeFactory, ILogger<GhostRiderWorker> logger)
     {
@@ -17,7 +16,7 @@ namespace NearU_Backend_Revised.BackgroundServices
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-      while(!stoppingToken.IsCancellationRequested)
+      while(!stoppingToken.IsCancellationRequested)  //run until app stop
       {
         await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         await CleanupAsync();
@@ -27,7 +26,7 @@ namespace NearU_Backend_Revised.BackgroundServices
     private async Task CleanupAsync()
     {
       using var scope = _scopeFactory.CreateScope();
-      var db = scope.ServiceProvider.GetRequiredKeyedService<ApplicationDbContext>();
+      var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
       
       var cutoff = DateTime.UtcNow.AddMinutes(-5);
 
@@ -38,7 +37,7 @@ namespace NearU_Backend_Revised.BackgroundServices
       foreach (var ride in stale)
       {
         ride.Status = "Expired";
-        ride.UpdatedAt = DateTime.UtcNow();
+        ride.UpdatedAt = DateTime.UtcNow;
       }
 
       var count = await db.SaveChangesAsync();
