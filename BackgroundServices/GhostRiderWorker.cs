@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
 using NearU_Backend_Revised.Data;
 
 namespace NearU_Backend_Revised.BackgroundServices
@@ -21,6 +22,27 @@ namespace NearU_Backend_Revised.BackgroundServices
         await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         await CleanupAsync();
       }
+    }
+
+    private async Task CleanupAsync()
+    {
+      using var scope = _scopeFactory.CreateScope();
+      var db = scope.ServiceProvider.GetRequiredKeyedService<ApplicationDbContext>();
+      
+      var cutoff = DateTime.UtcNow.AddMinutes(-5);
+
+      var stale = await db.RideRequests
+        .Where(r => r.Status == "Pending" && r.CreatedAt < cutoff)
+        .ToListAsync();
+
+      foreach (var ride in stale)
+      {
+        ride.Status = "Expired";
+        ride.UpdatedAt = DateTime.UtcNow();
+      }
+
+      var count = await db.SaveChangesAsync();
+      _logger.LogInformation("GhostRider: Expired {Count} ride requests", count);      
     }
   }
 }
