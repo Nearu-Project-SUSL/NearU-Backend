@@ -13,7 +13,7 @@ namespace NearU_Backend_Revised.Data
         {
         }
 
-        // DbSets for entities
+        // Existing DbSets
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<FoodShop> FoodShops { get; set; } = null!;
@@ -21,6 +21,10 @@ namespace NearU_Backend_Revised.Data
         public DbSet<MenuItem> MenuItems { get; set; } = null!;
         public DbSet<AccommodationItem> AccommodationItems { get; set; } = null!;
         public DbSet<Job> Jobs { get; set; } = null!;
+
+        // Add these new DbSets
+        public DbSet<GiftShop> GiftShops { get; set; } = null!;
+        public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,7 +35,6 @@ namespace NearU_Backend_Revised.Data
             {
                 entity.HasKey(rt => rt.Id);
 
-                // Configure Id as auto-increment (SERIAL in PostgreSQL, AUTOINCREMENT in SQLite)
                 entity.Property(rt => rt.Id)
                     .ValueGeneratedOnAdd();
 
@@ -54,14 +57,11 @@ namespace NearU_Backend_Revised.Data
                 entity.Property(rt => rt.ReasonRevoked)
                     .HasMaxLength(200);
 
-                // Create index on Token for faster lookups
                 entity.HasIndex(rt => rt.Token)
                     .IsUnique();
 
-                // Create index on UserId for faster user token queries
                 entity.HasIndex(rt => rt.UserId);
 
-                // Foreign key relationship with User
                 entity.HasOne(rt => rt.User)
                     .WithMany(u => u.RefreshTokens)
                     .HasForeignKey(rt => rt.UserId)
@@ -72,7 +72,73 @@ namespace NearU_Backend_Revised.Data
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(u => u.Id);
-                // Add other User configurations here as needed
+            });
+
+            // Configure GiftShop entity
+            modelBuilder.Entity<GiftShop>(entity =>
+            {
+                entity.HasKey(gs => gs.Id);
+
+                entity.Property(gs => gs.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(gs => gs.ImageUrl)
+                    .HasMaxLength(500);
+
+                entity.Property(gs => gs.LocationName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(gs => gs.Phone)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(gs => gs.Email)
+                    .HasMaxLength(150);
+
+                entity.Property(gs => gs.Address)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(gs => gs.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(gs => gs.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(gs => gs.UpdatedAt)
+                    .IsRequired();
+            });
+
+            // Configure GiftProduct entity
+            modelBuilder.Entity<GiftProduct>(entity =>
+            {
+                entity.HasKey(gp => gp.Id);
+
+                entity.Property(gp => gp.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(gp => gp.PhotoUrl)
+                    .HasMaxLength(500);
+
+                entity.Property(gp => gp.Price)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(gp => gp.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(gp => gp.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(gp => gp.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(gp => gp.GiftShop)
+                    .WithMany(gs => gs.Products)
+                    .HasForeignKey(gp => gp.GiftShopId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
 

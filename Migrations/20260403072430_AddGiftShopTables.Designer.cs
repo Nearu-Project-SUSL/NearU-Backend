@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NearU_Backend_Revised.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NearU_Backend_Revised.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403072430_AddGiftShopTables")]
+    partial class AddGiftShopTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -165,33 +168,18 @@ namespace NearU_Backend_Revised.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
-                    b.Property<string>("City")
-                        .HasColumnType("text");
-
                     b.Property<string>("CreatedDate")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("DateOfBirth")
                         .HasColumnType("text");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Faculty")
-                        .HasColumnType("text");
-
                     b.Property<int>("IsActive")
                         .HasColumnType("integer");
 
                     b.Property<string>("LastLoginDate")
-                        .HasColumnType("text");
-
-                    b.Property<string>("MobileNumber")
                         .HasColumnType("text");
 
                     b.Property<string>("PasswordHash")
@@ -202,14 +190,8 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("StudentId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Year")
                         .HasColumnType("text");
 
                     b.HasKey("Id");

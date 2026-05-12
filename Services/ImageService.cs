@@ -1,64 +1,62 @@
-using Imagekit;
-using Imagekit.Sdk;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using NearU_Backend_Revised.Configuration;
+using NearU_Backend_Revised.Configurations;
 using NearU_Backend_Revised.Services.Interfaces;
-using NearU_Backend_Revised.Models;
 
 namespace NearU_Backend_Revised.Services
 {
     public class ImageService : IImageService
     {
-        private readonly ImageKitSetting _settings;
+        private readonly ImageKitSettings _imageKitSettings;
+        private readonly HttpClient _httpClient;
 
-        //allowed file types
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
-        private readonly string[] _allowedMimeTypes = { "image/jpeg", "image/png", "image/webp" };
-
-        //max file size = 5mb
-        private const long MaxFileSizeBytes = 5 * 1024 * 1024;
-
-        public ImageService(IOptions<ImageKitSetting> settings) //IOptions<ImageKitSetting> reads from appsetting auto
+        public ImageService(IOptions<ImageKitSettings> imageKitSettings)
         {
-            _settings = settings.Value;
+            _imageKitSettings = imageKitSettings.Value;
+            _httpClient = new HttpClient();
         }
 
-        public async Task<string> UploadImageAsync(IFormFile file, string folder)
+        public async Task<string?> UploadImageAsync(IFormFile file, string folder)
         {
-            if (file.Length > MaxFileSizeBytes)
-                throw new InvalidOperationException("File size exceed 5MB limit");
+            if (file == null || file.Length == 0)
+                return null;
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            using var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            var bytes = memoryStream.ToArray();
+            var base64 = Convert.ToBase64String(bytes);
 
-            if (!_allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
-                throw new InvalidOperationException("Invalid file type");
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://upload.imagekit.io/api/v1/files/upload");
 
+            var authValue = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_imageKitSettings.PrivateKey}:")
+            );
 
-            using var memoryStream = new MemoryStream(); //convert file to raw bytes
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
 
-            await file.CopyToAsync(memoryStream); //copy file contents to memory stream
-
-            var fileBytes = memoryStream.ToArray(); //convert memory stream to byte array
-
-            //create imagekit client
-            var imageKit = new ImagekitClient(
-                _settings.PublicKey,
-                _settings.PrivateKey,
-                _settings.UrlEndpoint
-                );
-
-            var fileName = $"{Guid.NewGuid()}{extension}"; //generate unique file name
-
-            var uploadRequest = new FileCreateRequest
+            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                file = fileBytes, //real file bytes
-                fileName = fileName, //filename in imagekit
-                folder = folder //folder in imagekit (which folder foodshop or menuitem)
-            };
+                { "file", base64 },
+                { "fileName", $"{Guid.NewGuid()}_{file.FileName}" },
+                { "folder", folder },
+                { "useUniqueFileName", "true" }
+            });
 
-            var result = await imageKit.UploadAsync(uploadRequest); //upload file to imagekit
+            var response = await _httpClient.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
 
-            return result.url; //return the URL of the uploaded image
+            if (!response.IsSuccessStatusCode)
+                throw new Exception($"ImageKit upload failed: {response.StatusCode} - {responseBody}");
+
+            using var jsonDoc = JsonDocument.Parse(responseBody);
+
+            if (jsonDoc.RootElement.TryGetProperty("url", out var urlElement))
+                return urlElement.GetString();
+
+            return null;
         }
     }
 }
