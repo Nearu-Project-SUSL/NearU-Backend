@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using System.Text;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Configurations;
@@ -25,20 +28,48 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Health checks — used by the Docker Compose healthcheck directive
+builder.Services.AddHealthChecks();
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  return origin.StartsWith("http://localhost") ||
+                         origin.StartsWith("https://localhost") ||
+                         origin.EndsWith(".ondigitalocean.app") ||
+                         origin == "https://near-u-frontend-pi.vercel.app" ||
+                         origin.EndsWith(".vercel.app") ||
+                         origin == "https://nearusab.me" ||
+                         origin == "https://www.nearusab.me" ||
+                         origin == "https://api.nearusab.me";
+              })
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
+// Add Rate Limiting for Login
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("login-limit", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(15);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+});
+
 // Register JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+if (string.IsNullOrEmpty(jwtSettings?.SecretKey))
+    throw new InvalidOperationException("JWT SecretKey is not configured. Set JwtSettings:SecretKey in appsettings or the JwtSettings__SecretKey environment variable.");
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 // Configure JWT Authentication
@@ -65,6 +96,8 @@ builder.Services.AddAuthentication(options =>
         ),
         ClockSkew = TimeSpan.Zero
     };
+
+
 });
 
 // Configure Authorization Policies
@@ -84,6 +117,8 @@ builder.Services.AddAuthorization(options =>
 
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+if (string.IsNullOrEmpty(connectionString))
+    throw new InvalidOperationException("PostgreSQL connection string is not configured. Set ConnectionStrings:PostgreSQL in appsettings or the ConnectionStrings__PostgreSQL environment variable.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -102,6 +137,45 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobService, JobService>();
+
+// Configure RideSettings
+builder.Services.Configure<NearU_Backend.Configuration.RideSettings>(
+    builder.Configuration.GetSection("RideSettings")
+);
+
+// Redis Integration
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "NearU_";
+    });
+}
+else
+{
+    // Fallback to in-memory cache if Redis is not configured
+    builder.Services.AddDistributedMemoryCache();
+}
+
+// Firebase Admin Setup
+var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
+if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(firebaseCredentialsPath))
+{
+#pragma warning disable CS0618
+    using (var stream = new System.IO.FileStream(firebaseCredentialsPath, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+    {
+        FirebaseAdmin.FirebaseApp.Create(new FirebaseAdmin.AppOptions
+        {
+            Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(stream)
+        });
+    }
+#pragma warning restore CS0618
+}
+
 
 var app = builder.Build();
 
@@ -127,8 +201,21 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+// Trust X-Forwarded-For and X-Forwarded-Proto from Nginx reverse proxy
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseRouting();
+
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

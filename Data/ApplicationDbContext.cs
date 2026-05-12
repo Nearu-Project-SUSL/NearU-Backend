@@ -16,6 +16,11 @@ namespace NearU_Backend_Revised.Data
         // Existing DbSets
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<FoodShop> FoodShops { get; set; } = null!;
+        public DbSet<Accommodation> Accommodations { get; set; } = null!;
+        public DbSet<MenuItem> MenuItems { get; set; } = null!;
+        public DbSet<AccommodationItem> AccommodationItems { get; set; } = null!;
+        public DbSet<Job> Jobs { get; set; } = null!;
 
         // Add these new DbSets
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
@@ -134,6 +139,156 @@ namespace NearU_Backend_Revised.Data
                     .WithMany(gs => gs.Products)
                     .HasForeignKey(gp => gp.GiftShopId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            modelBuilder.Entity<Accommodation>(entity =>
+            {
+                entity.HasKey(acc => acc.Id);
+
+                entity.Property(acc => acc.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(acc => acc.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(acc => acc.Address)
+                    .HasMaxLength(200);
+
+                entity.Property(acc => acc.PhoneNumber)
+                   .HasMaxLength(20);
+
+                entity.Property(acc => acc.CreatedAt)
+                    .HasDefaultValueSql("NOW()");
+
+                entity.HasMany(acc => acc.AccommodationItems)
+                    .WithOne(mi => mi.Accommodation)
+                    .HasForeignKey(mi => mi.AccommodationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AccommodationItem>(entity =>
+            {
+                entity.HasKey(mi => mi.Id);
+
+                entity.Property(mi => mi.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(mi => mi.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(mi => mi.Price)
+                    .IsRequired()
+                    .HasColumnType("decimal(10,2)");
+
+                entity.Property(mi => mi.PhotoUrl)
+                    .HasMaxLength(500);
+
+                entity.HasIndex(mi => mi.AccommodationId);
+            });
+
+            modelBuilder.Entity<FoodShop>(entity =>
+            {
+                entity.HasKey(fs => fs.Id);
+
+                entity.Property(fs => fs.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(fs => fs.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(fs => fs.Address)
+                    .HasMaxLength(200);
+
+                entity.Property(fs => fs.PhoneNumber)
+                   .HasMaxLength(20);
+
+                entity.Property(fs => fs.CreatedAt)
+                    .HasDefaultValueSql("NOW()");
+
+                entity.HasMany(fs => fs.MenuItems)
+                    .WithOne(mi => mi.FoodShop)
+                    .HasForeignKey(mi => mi.FoodShopId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<MenuItem>(entity =>
+            {
+                entity.HasKey(mi => mi.Id);
+
+                entity.Property(mi => mi.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(mi => mi.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(mi => mi.Price)
+                    .IsRequired()
+                    .HasColumnType("decimal(10,2)");
+
+                entity.Property(mi => mi.PhotoUrl)
+                    .HasMaxLength(500);
+
+                entity.HasIndex(mi => mi.FoodShopId);
+            });
+
+            modelBuilder.Entity<Job>(entity =>
+            {
+                entity.HasKey(j => j.Id);
+
+                entity.Property(j => j.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(j => j.Company)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(j => j.Location)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(j => j.PayRange)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(j => j.JobType)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(j => j.Category)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(j => j.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(j => j.LongDescription)
+                    .HasMaxLength(2000);
+
+                entity.Property(j => j.PostedByName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(j => j.PostedByUserId)
+                    .IsRequired();
+
+                entity.Property(j => j.CreatedAt)
+                    .HasDefaultValueSql("NOW()");
+
+                entity.HasOne(j => j.PostedByUser)
+                    .WithMany()
+                    .HasForeignKey(j => j.PostedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(j => j.Category);
+                entity.HasIndex(j => j.IsNew);
+                entity.HasIndex(j => j.CreatedAt);
+                entity.HasIndex(j => j.PostedByUserId);
             });
         }
     }

@@ -20,7 +20,7 @@ namespace NearU_Backend_Revised.Repositories
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
 
-        public async Task<User?> GetUserById(string userId)
+        public async Task<User?> GetByIdAsync(string userId)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         }
