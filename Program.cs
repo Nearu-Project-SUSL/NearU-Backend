@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using NearU_Backend_Revised.BackgroundServices;
 using NearU_Backend_Revised.Hubs;
 using NearU_Backend_Revised.Configuration;
-using NearU_Backend_Revised.Configurations;
 using NearU_Backend_Revised.Data;
 using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories;
@@ -130,6 +129,7 @@ builder.Services.AddScoped<IFoodShopRepository, FoodShopRepository>();
 builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
 builder.Services.AddScoped<IFoodShopService, FoodShopService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
 // Accommodation feature
