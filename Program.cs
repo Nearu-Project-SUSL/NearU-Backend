@@ -8,6 +8,7 @@ using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NearU_Backend_Revised.BackgroundServices;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
@@ -135,6 +136,11 @@ builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
 builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
+
+// Rides feature
+builder.Services.AddScoped<IRideRepository, RideRepository>();
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddHostedService<GhostRiderWorker>();
 
 // Configure Database (PostgreSQL)
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
