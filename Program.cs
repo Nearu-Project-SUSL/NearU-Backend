@@ -1,12 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NearU_Backend_Revised.Configuration;
-using NearU_Backend_Revised.Data;
-using NearU_Backend_Revised.Models;
-using NearU_Backend_Revised.Services;
-using NearU_Backend_Revised.Services.Interfaces;
-using NearU_Backend_Revised.Repositories;
-using NearU_Backend_Revised.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,7 +8,13 @@ using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
 using NearU_Backend_Revised.BackgroundServices;
 using NearU_Backend_Revised.Hubs;
-
+using NearU_Backend_Revised.Configuration;
+using NearU_Backend_Revised.Data;
+using NearU_Backend_Revised.Models;
+using NearU_Backend_Revised.Repositories;
+using NearU_Backend_Revised.Repositories.Interfaces;
+using NearU_Backend_Revised.Services;
+using NearU_Backend_Revised.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,8 +97,10 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings?.Issuer,
         ValidAudience = jwtSettings?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")),
-        ClockSkew = TimeSpan.FromMinutes(5) // Allow 5 minute clock skew
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
+        ),
+        ClockSkew = TimeSpan.FromMinutes(5)
     };
 
 
@@ -112,7 +113,7 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
     });
-    
+
     options.AddPolicy("RequireUserId", policy =>
     {
         policy.RequireAuthenticatedUser();
@@ -120,16 +121,15 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-//register imagekit settings
-builder.Services.Configure<ImageKitSetting>(
-    builder.Configuration.GetSection("ImageKit")
-);
+builder.Services.Configure<ImageKitSettings>(
+    builder.Configuration.GetSection("ImageKit"));
 
 // Food feature
 builder.Services.AddScoped<IFoodShopRepository, FoodShopRepository>();
 builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
 builder.Services.AddScoped<IFoodShopService, FoodShopService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
 // Accommodation feature
@@ -138,7 +138,11 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
-// Configure Database (PostgreSQL)
+// Gift feature
+builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
+builder.Services.AddScoped<IGiftShopService, GiftShopService>();
+
+// Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("PostgreSQL connection string is not configured. Set ConnectionStrings:PostgreSQL in appsettings or the ConnectionStrings__PostgreSQL environment variable.");
@@ -147,12 +151,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
         npgsqlOptions.UseNetTopologySuite();
-        npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null
+        );
         npgsqlOptions.CommandTimeout(30);
     });
 });
 
-// Register repositories and services
+// Register other repositories and services
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
@@ -257,8 +265,5 @@ app.MapHub<RidesHub>("/hubs/rides", options =>
     // Enable stateful reconnects to handle clients losing connection temporarily
     options.AllowStatefulReconnects = true;
 });
-
-// Health check endpoint — polled by Docker every 30 seconds
-app.MapHealthChecks("/healthz");
 
 app.Run();
