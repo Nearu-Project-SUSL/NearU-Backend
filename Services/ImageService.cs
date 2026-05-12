@@ -1,6 +1,5 @@
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+using Imagekit;
+using Imagekit.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using NearU_Backend_Revised.Configurations;
@@ -11,12 +10,10 @@ namespace NearU_Backend_Revised.Services
     public class ImageService : IImageService
     {
         private readonly ImageKitSettings _imageKitSettings;
-        private readonly HttpClient _httpClient;
 
         public ImageService(IOptions<ImageKitSettings> imageKitSettings)
         {
             _imageKitSettings = imageKitSettings.Value;
-            _httpClient = new HttpClient();
         }
 
         public async Task<string?> UploadImageAsync(IFormFile file, string folder)
@@ -29,34 +26,28 @@ namespace NearU_Backend_Revised.Services
             var bytes = memoryStream.ToArray();
             var base64 = Convert.ToBase64String(bytes);
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://upload.imagekit.io/api/v1/files/upload");
-
-            var authValue = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_imageKitSettings.PrivateKey}:")
+            var imagekit = new ImagekitClient(
+                _imageKitSettings.PublicKey,
+                _imageKitSettings.PrivateKey,
+                _imageKitSettings.UrlEndpoint
             );
 
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+            var fileName = $"{Guid.NewGuid()}_{file.FileName}";
 
-            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            var uploadRequest = new FileCreateRequest
             {
-                { "file", base64 },
-                { "fileName", $"{Guid.NewGuid()}_{file.FileName}" },
-                { "folder", folder },
-                { "useUniqueFileName", "true" }
-            });
+                file = base64,
+                fileName = fileName,
+                folder = folder,
+                useUniqueFileName = true
+            };
 
-            var response = await _httpClient.SendAsync(request);
-            var responseBody = await response.Content.ReadAsStringAsync();
+            var result = await imagekit.UploadAsync(uploadRequest);
 
-            if (!response.IsSuccessStatusCode)
-                throw new Exception($"ImageKit upload failed: {response.StatusCode} - {responseBody}");
+            if (result == null || string.IsNullOrWhiteSpace(result.url))
+                return null;
 
-            using var jsonDoc = JsonDocument.Parse(responseBody);
-
-            if (jsonDoc.RootElement.TryGetProperty("url", out var urlElement))
-                return urlElement.GetString();
-
-            return null;
+            return result.url;
         }
     }
 }
