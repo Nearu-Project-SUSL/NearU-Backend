@@ -18,255 +18,99 @@ namespace NearU_Backend_Revised.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "8.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>
+            modelBuilder.Entity("NearU_Backend_Revised.Models.GiftProduct", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Amenities")
-                        .HasColumnType("text");
-
-                    b.Property<int>("AvailableBeds")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<decimal>("DistanceKm")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("MonthlyRent")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("PhotoUrl")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Accommodations");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.AccommodationItem", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AccommodationId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                    b.Property<Guid>("GiftShopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
 
                     b.Property<string>("PhotoUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AccommodationId");
+                    b.HasIndex("GiftShopId");
 
-                    b.ToTable("AccommodationItems");
+                    b.ToTable("GiftProducts");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.FoodShop", b =>
+            modelBuilder.Entity("NearU_Backend_Revised.Models.GiftShop", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Address")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Category")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("LocationName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
 
-                    b.Property<string>("PhoneNumber")
+                    b.Property<string>("Phone")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<string>("PhotoUrl")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("FoodShops");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Job", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Company")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsNew")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("JobType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Logo")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LongDescription")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("PayRange")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PostedByName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PostedByUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Requirements")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Tags")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Category");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("IsNew");
-
-                    b.HasIndex("PostedByUserId");
-
-                    b.ToTable("Jobs");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.MenuItem", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("FoodShopId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PhotoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FoodShopId");
-
-                    b.ToTable("MenuItems");
+                    b.ToTable("GiftShops");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.RefreshToken", b =>
@@ -562,37 +406,15 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.AccommodationItem", b =>
+            modelBuilder.Entity("NearU_Backend_Revised.Models.GiftProduct", b =>
                 {
-                    b.HasOne("NearU_Backend_Revised.Models.Accommodation", "Accommodation")
-                        .WithMany("AccommodationItems")
-                        .HasForeignKey("AccommodationId")
+                    b.HasOne("NearU_Backend_Revised.Models.GiftShop", "GiftShop")
+                        .WithMany("Products")
+                        .HasForeignKey("GiftShopId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Accommodation");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Job", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.User", "PostedByUser")
-                        .WithMany()
-                        .HasForeignKey("PostedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("PostedByUser");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.MenuItem", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.FoodShop", "FoodShop")
-                        .WithMany("MenuItems")
-                        .HasForeignKey("FoodShopId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("FoodShop");
+                    b.Navigation("GiftShop");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.RefreshToken", b =>
@@ -646,14 +468,9 @@ namespace NearU_Backend_Revised.Migrations
                     b.Navigation("RideRequest");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>
+            modelBuilder.Entity("NearU_Backend_Revised.Models.GiftShop", b =>
                 {
-                    b.Navigation("AccommodationItems");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.FoodShop", b =>
-                {
-                    b.Navigation("MenuItems");
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.RideRequest", b =>
