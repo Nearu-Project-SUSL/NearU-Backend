@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NearU_Backend_Revised.BackgroundServices;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
@@ -137,6 +138,12 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
+// Rides feature
+builder.Services.AddScoped<IRideRepository, RideRepository>();
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddHostedService<GhostRiderWorker>();
+
+// Configure Database (PostgreSQL)
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
@@ -156,6 +163,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorCodesToAdd: null
         );
         npgsqlOptions.CommandTimeout(30);
+        npgsqlOptions.UseNetTopologySuite(); //tells EF to map Point type to PostGIS geography
     });
 });
 
@@ -296,5 +304,8 @@ app.MapHub<RidesHub>("/hubs/rides", options =>
     // Enable stateful reconnects to handle clients losing connection temporarily
     options.AllowStatefulReconnects = true;
 });
+
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
 
 app.Run();

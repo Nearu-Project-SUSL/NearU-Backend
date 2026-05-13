@@ -36,4 +36,20 @@ public class RideNotificationService : IRideNotificationService
                 },
                 cancellationToken);
     }
+
+    public async Task BroadcastLocationAsync(string rideId, double latitude, double longitude, CancellationToken cancellationToken = default)
+    {
+        // Broadcast the real-time coordinates to anyone subscribed to this specific ride (usually the student tracking their driver)
+        await _hubContext.Clients.Group($"ride:{rideId}")
+            .SendAsync(
+                "LocationUpdated",
+                new
+                {
+                    rideId = rideId,
+                    latitude = latitude,
+                    longitude = longitude,
+                    timestamp = DateTime.UtcNow
+                },
+                cancellationToken);
+    }
 }
