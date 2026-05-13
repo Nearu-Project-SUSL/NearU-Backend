@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778697567034,
+  "lastUpdate": 1778700894717,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -370,6 +370,60 @@ window.BENCHMARK_DATA = {
             "value": 396.2743182182312,
             "unit": "ns",
             "range": "± 3.2772079377104055"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "22fis0469@ms.sab.ac.lk",
+            "name": "Uvindu  Heshan",
+            "username": "uvindu-heshan"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "db18206de0c71e7c0966ce0bca5a8321fbd97dfc",
+          "message": "Merge pull request #127 from Nearu-Project-SUSL/NU-22-Gift-Section\n\nImplement GiftShopsController and enhance ride service features",
+          "timestamp": "2026-05-14T01:03:26+05:30",
+          "tree_id": "db040fae4437fa5d26cc8cd729328a125f6baab6",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/db18206de0c71e7c0966ce0bca5a8321fbd97dfc"
+        },
+        "date": 1778700893844,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7450.390329996745,
+            "unit": "ns",
+            "range": "± 36.68429636292971"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146606968.5,
+            "unit": "ns",
+            "range": "± 40872.379990190195"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15670.30337524414,
+            "unit": "ns",
+            "range": "± 179.86278392879768"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1304.9547513326008,
+            "unit": "ns",
+            "range": "± 9.16754268229254"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 464.0856641133626,
+            "unit": "ns",
+            "range": "± 0.2606255098865173"
           }
         ]
       }
