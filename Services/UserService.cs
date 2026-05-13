@@ -32,6 +32,8 @@ namespace NearU_Backend_Revised.Services
         {
             var existingUser = await _userRepo.GetUserByEmail(request.Email);
             if (existingUser != null) throw new Exception("User already exists");
+            if (!request.Email.EndsWith("@susl.lk", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Only @susl.lk email addresses are allowed.");
 
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
             var user = new User

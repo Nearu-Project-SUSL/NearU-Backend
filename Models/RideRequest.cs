@@ -1,43 +1,71 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using NetTopologySuite.Geometries; // Point type comes from here
+using System.ComponentModel.DataAnnotations.Schema;
+using NetTopologySuite.Geometries;
+using NearU_Backend_Revised.Enums;
 
-namespace NearU_Backend_Revised.Models
+namespace NearU_Backend_Revised.Models;
+
+public class RideRequest
 {
-    public class RideRequest
-    {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        [Required]
-        public Guid StudentId { get; set; }
+    public string StudentId { get; set; } = null!;
 
-        public Guid? RiderId { get; set; }
+    [ForeignKey("StudentId")]
+    public virtual User Student { get; set; } = null!;
 
-        [Required]
-        [MaxLength(50)]
-        public string ServiceType { get; set; } = string.Empty;
+    public string? RiderId { get; set; }
 
-        public string? Details { get; set; }
+    [ForeignKey("RiderId")]
+    public virtual User? Rider { get; set; }
 
-        // Point stores both lat and lon together as a PostGIS geography column
-        // SRID 4326 = standard GPS coordinate system (WGS84)
-        [Required]
-        public Point PickupLocation {get; set;} = null!;
-        [Required]
-        public Point DropoffLocation {get; set;} = null!;
+    public RideServiceType ServiceType { get; set; } = RideServiceType.PersonalRide;
 
-        [MaxLength(10)]
-        public string Status { get; set; } = "Pending"; // Pending, Accepted, Completed, Expired
+    [Column(TypeName = "jsonb")]
+    public string Details { get; set; } = "{}";
 
-        [MaxLength(4)]
-        public string? OTP { get; set; }
+    public RideRequestStatus Status { get; set; } = RideRequestStatus.Pending;
 
-        public decimal? Price { get; set; }
+    [Column(TypeName = "geography(Point, 4326)")]
+    public Point PickupLocation { get; set; } = null!;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column(TypeName = "geography(Point, 4326)")]
+    public Point DropoffLocation { get; set; } = null!;
 
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    }
+    public string? OTP { get; set; }
+
+    public DateTime? OtpExpiresAt { get; set; }
+
+    public int OTPAttempts { get; set; }
+
+    public decimal EstimatedFare { get; set; }
+
+    public decimal CalculatedDistance { get; set; }
+
+    [Column(TypeName = "jsonb")]
+    public string PriceRateSnapshot { get; set; } = "{}";
+
+    public bool PenaltyApplied { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime? AcceptedAt { get; set; }
+
+    public DateTime? ArrivedAt { get; set; }
+
+    public DateTime? InProgressAt { get; set; }
+
+    public DateTime? CompletedAt { get; set; }
+
+    public DateTime? CancelledAt { get; set; }
+
+    public DateTime? LastHeartbeatAt { get; set; }
+
+    [InverseProperty("RideRequest")]
+    public virtual ICollection<TrackingLog> TrackingLogs { get; set; } = new List<TrackingLog>();
 }
-
- 
