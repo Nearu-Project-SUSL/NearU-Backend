@@ -17,13 +17,14 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(
-            [FromQuery] string? keyword,
-            [FromQuery] string? location,
-            [FromQuery] bool? isActive)
+        public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] string? location, [FromQuery] bool? isActive)
         {
-            var result = await _giftShopService.GetAllAsync(keyword, location, isActive);
-            return Ok(result);
+            try {
+                var giftShops = await _giftShopService.GetAllAsync(keyword, location, isActive);
+                return Ok(giftShops);
+            } catch (Exception ex) {
+                return StatusCode(500, new { message = ex.Message, inner = ex.InnerException?.Message, stackTrace = ex.StackTrace });
+            }
         }
 
         [HttpGet("{id:guid}")]
