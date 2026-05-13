@@ -3,6 +3,7 @@ using NearU_Backend_Revised.Data;
 using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NetTopologySuite.Geometries;
+using NearU_Backend_Revised.Enums;
 
 namespace NearU_Backend_Revised.Repositories
 {
@@ -46,7 +47,7 @@ namespace NearU_Backend_Revised.Repositories
         public async Task<IEnumerable<RideRequest>> GetPendingOlderThanAsync(DateTime cutoff)
         {
             return await _context.RideRequests
-                .Where(r => r.Status == "Pending" && r.CreatedAt < cutoff)
+                .Where(r => r.Status == RideRequestStatus.Pending && r.CreatedAt < cutoff)
                 .ToListAsync();
         }
 
