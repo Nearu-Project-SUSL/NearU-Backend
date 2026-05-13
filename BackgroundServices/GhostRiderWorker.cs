@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NearU_Backend_Revised.Data;
+using NearU_Backend_Revised.Enums;
 
 namespace NearU_Backend_Revised.BackgroundServices
 {
@@ -31,12 +32,12 @@ namespace NearU_Backend_Revised.BackgroundServices
       var cutoff = DateTime.UtcNow.AddMinutes(-5);
 
       var stale = await db.RideRequests
-        .Where(r => r.Status == "Pending" && r.CreatedAt < cutoff)
+        .Where(r => r.Status == RideRequestStatus.Pending && r.CreatedAt < cutoff)
         .ToListAsync();
 
       foreach (var ride in stale)
       {
-        ride.Status = "Expired";
+        ride.Status = RideRequestStatus.Expired;
         ride.UpdatedAt = DateTime.UtcNow;
       }
 
