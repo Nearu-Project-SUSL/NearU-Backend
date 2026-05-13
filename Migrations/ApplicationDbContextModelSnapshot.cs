@@ -349,6 +349,57 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("TrackingLogs");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RideRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text");
+
+                    b.Property<Point>("DropoffLocation")
+                        .IsRequired()
+                        .HasColumnType("geometry");
+
+                    b.Property<string>("OTP")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
+                    b.Property<Point>("PickupLocation")
+                        .IsRequired()
+                        .HasColumnType("geometry");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid?>("RiderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RideRequests");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.User", b =>
                 {
                     b.Property<string>("Id")
