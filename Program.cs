@@ -273,4 +273,7 @@ app.MapHub<RidesHub>("/hubs/rides", options =>
     options.AllowStatefulReconnects = true;
 });
 
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
+
 app.Run();
