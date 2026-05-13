@@ -307,6 +307,7 @@ public class RideService : IRideService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+        await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, cancellationToken);
     }
 
     public async Task<RideLocationResponseDto> GetLiveLocationAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
@@ -314,21 +315,15 @@ public class RideService : IRideService
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
             ?? throw new InvalidOperationException("Ride request not found.");
         if (ride.StudentId != studentId)
-        {
             throw new UnauthorizedAccessException("Live location is restricted to the matched student.");
-        }
 
         if (string.IsNullOrWhiteSpace(ride.RiderId))
-        {
             throw new InvalidOperationException("Ride has no assigned rider yet.");
-        }
 
         var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == ride.RiderId, cancellationToken)
             ?? throw new InvalidOperationException("Rider status not found.");
         if (riderStatus.LastLocation == null)
-        {
             throw new InvalidOperationException("No live coordinates available yet.");
-        }
 
         return new RideLocationResponseDto
         {
@@ -337,6 +332,26 @@ public class RideService : IRideService
             Longitude = riderStatus.LastLocation.X,
             UpdatedAtUtc = riderStatus.LastSeen
         };
+    }
+
+    public async Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 5000, CancellationToken cancellationToken = default)
+    {
+        var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        if (riderStatus == null || !riderStatus.IsOnline || riderStatus.ApprovalStatus != RiderApprovalStatus.Approved)
+        {
+            throw new InvalidOperationException("Only approved online riders can search for requests.");
+        }
+
+        var point = CreatePoint(longitude, latitude);
+
+        var pendingRides = await _dbContext.RideRequests
+            .Where(r => r.Status == RideRequestStatus.Pending)
+            .Where(r => r.PickupLocation.Distance(point) <= radiusMeters)
+            .OrderBy(r => r.PickupLocation.Distance(point))
+            .Take(20)
+            .ToListAsync(cancellationToken);
+
+        return pendingRides.Select(MapSummary);
     }
 
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
