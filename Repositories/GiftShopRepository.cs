@@ -45,7 +45,7 @@ namespace NearU_Backend_Revised.Repositories
         public async Task<GiftShop?> GetByIdAsync(Guid id)
         {
             return await _context.GiftShops
-                .Include(g => g.Products.OrderByDescending(p => p.CreatedAt))
+                .Include(g => g.Products)
                 .FirstOrDefaultAsync(g => g.Id == id);
         }
 
