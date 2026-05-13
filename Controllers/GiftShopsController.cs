@@ -100,7 +100,7 @@ namespace NearU_Backend_Revised.Controllers
         {
             var deleted = await _giftShopService.DeleteProductAsync(productId);
             if (!deleted)
-                return NotFound(new { message = "Product not found " });
+                return NotFound(new { message = "Product not found." });
 
             return Ok(new { message = "Product deleted successfully." });
         }

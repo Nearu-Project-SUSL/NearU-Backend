@@ -5,9 +5,12 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
+using NearU_Backend_Revised.BackgroundServices;
+using NearU_Backend_Revised.Hubs;
 using NearU_Backend_Revised.Configuration;
-using NearU_Backend_Revised.Configurations;
 using NearU_Backend_Revised.Data;
+using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
@@ -15,18 +18,21 @@ using NearU_Backend_Revised.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ImageKit settings
-builder.Services.Configure<ImageKitSettings>(
-    builder.Configuration.GetSection("ImageKit"));
-
-// Register Gift Shop services
-builder.Services.AddScoped<IImageService, ImageService>();
-builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
-builder.Services.AddScoped<IGiftShopService, GiftShopService>();
-
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .SelectMany(e => e.Value!.Errors)
+                .Select(e => e.ErrorMessage)
+                .ToList();
+            var response = ApiResponse<object>.FailResponse(string.Join("; ", errors));
+            return new BadRequestObjectResult(response);
+        };
+    });
+builder.Services.AddOpenApi();
 
 // Health checks — used by the Docker Compose healthcheck directive
 builder.Services.AddHealthChecks();
@@ -94,7 +100,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
         ),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.FromMinutes(5)
     };
 
 
@@ -115,6 +121,27 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+builder.Services.Configure<ImageKitSettings>(
+    builder.Configuration.GetSection("ImageKit"));
+
+// Food feature
+builder.Services.AddScoped<IFoodShopRepository, FoodShopRepository>();
+builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+builder.Services.AddScoped<IFoodShopService, FoodShopService>();
+builder.Services.AddScoped<IMenuItemService, MenuItemService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IImageService, ImageService>();
+
+// Accommodation feature
+builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
+builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
+builder.Services.AddScoped<IAccommodationService, AccommodationService>();
+builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
+
+// Gift feature
+builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
+builder.Services.AddScoped<IGiftShopService, GiftShopService>();
+
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrEmpty(connectionString))
@@ -123,6 +150,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
+        npgsqlOptions.UseNetTopologySuite();
         npgsqlOptions.EnableRetryOnFailure(
             maxRetryCount: 3,
             maxRetryDelay: TimeSpan.FromSeconds(5),
@@ -141,9 +169,14 @@ builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
 // Configure RideSettings
-builder.Services.Configure<NearU_Backend.Configuration.RideSettings>(
-    builder.Configuration.GetSection("RideSettings")
-);
+builder.Services.Configure<RideSettings>(
+    builder.Configuration.GetSection("RideSettings"));
+
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
+builder.Services.AddScoped<IRideNotificationService, RideNotificationService>();
+builder.Services.AddHostedService<GhostRiderCleanupWorker>();
+builder.Services.AddHostedService<RideLifecycleWorker>();
 
 // Redis Integration
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
@@ -154,11 +187,20 @@ if (!string.IsNullOrWhiteSpace(redisConnectionString))
         options.Configuration = redisConnectionString;
         options.InstanceName = "NearU_";
     });
+    
+    // Add SignalR with Redis Backplane
+    builder.Services.AddSignalR().AddStackExchangeRedis(redisConnectionString, options => 
+    {
+        options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NearU_SignalR");
+    });
 }
 else
 {
     // Fallback to in-memory cache if Redis is not configured
     builder.Services.AddDistributedMemoryCache();
+    
+    // Fallback to standard SignalR without backplane
+    builder.Services.AddSignalR();
 }
 
 // Firebase Admin Setup
@@ -197,8 +239,7 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
 }
 
 if (app.Environment.IsDevelopment())
@@ -219,5 +260,10 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<RidesHub>("/hubs/rides", options =>
+{
+    // Enable stateful reconnects to handle clients losing connection temporarily
+    options.AllowStatefulReconnects = true;
+});
 
 app.Run();

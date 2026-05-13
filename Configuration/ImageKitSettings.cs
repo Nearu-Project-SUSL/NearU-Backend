@@ -1,4 +1,4 @@
-namespace NearU_Backend_Revised.Configurations
+namespace NearU_Backend_Revised.Configuration
 {
     public class ImageKitSettings
     {
