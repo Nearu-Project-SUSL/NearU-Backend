@@ -1,0 +1,48 @@
+## ─────────────────────────────────────────────────────────────
+## NearU Backend — .dockerignore
+## Prevents secrets, IDE files, test projects, and build artefacts
+## from being copied into the Docker build context.
+## ─────────────────────────────────────────────────────────────
+
+# Git
+.git
+.gitignore
+
+# IDE & editor files
+.vs
+.vscode
+.idea
+*.user
+*.suo
+
+# Build artefacts (not needed — Docker restores & builds fresh)
+**/bin
+**/obj
+**/out
+
+# Test project — not included in the production image
+NearU_Backend.Tests/
+
+# Benchmark project — not included in the production image
+NearU.Benchmarks/
+
+# Secrets & environment files — must NEVER enter the image
+.env
+.env.*
+appsettings.Development.json
+appsettings.Local.json
+**/user-secrets/
+
+# Documentation & tooling (reduce context size)
+*.md
+postman/
+*.postman_collection.json
+
+# CI/CD & Docker files (not needed inside the image)
+.github/
+docker-compose.yml
+.dockerignore
+
+# Misc
+.DS_Store
+Thumbs.db

@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="NearU_Backend_Revised.csproj" />
+  <Project Path="NearU_Backend.Tests/NearU_Backend.Tests.csproj" />
+  <Project Path="NearU.Benchmarks/NearU.Benchmarks.csproj" />
 </Solution>

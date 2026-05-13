@@ -98,6 +98,19 @@ StyleCopReport.xml
 *.svclog
 *.scc
 
+# ASP.NET Core & Entity Framework
+appsettings.Local.json
+appsettings.Development.json
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment Variables
+.env
+.env.*
+
 # Chutzpah Test files
 _Chutzpah*
 
@@ -411,6 +424,14 @@ appsettings.*.json
 .env.*
 !.env.example
 !.env.template
+NearU_Rides_SRS_v2.pdf
 
 # Untracked unwanted directories
 Migrations/code/
+
+
+appsettings.Development.json
+**/user-secrets/
+bin/
+obj/
+out/

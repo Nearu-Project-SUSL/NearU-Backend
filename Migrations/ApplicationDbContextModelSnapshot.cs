@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NearU_Backend_Revised.Data;
+using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -20,6 +21,7 @@ namespace NearU_Backend_Revised.Migrations
                 .HasAnnotation("ProductVersion", "8.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.GiftProduct", b =>
@@ -160,23 +162,225 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RideHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("CalculatedDistance")
+                        .HasColumnType("decimal(6,3)");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("FinalFare")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("RideId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RiderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAt");
+
+                    b.HasIndex("RideId")
+                        .IsUnique();
+
+                    b.ToTable("RideHistories");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RideRequest", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ArrivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("CalculatedDistance")
+                        .HasColumnType("decimal(6,3)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Point>("DropoffLocation")
+                        .IsRequired()
+                        .HasColumnType("geography(Point, 4326)");
+
+                    b.Property<decimal>("EstimatedFare")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("InProgressAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastHeartbeatAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OTP")
+                        .HasMaxLength(4)
+                        .HasColumnType("character(4)")
+                        .IsFixedLength();
+
+                    b.Property<int>("OTPAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("OtpExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("PenaltyApplied")
+                        .HasColumnType("boolean");
+
+                    b.Property<Point>("PickupLocation")
+                        .IsRequired()
+                        .HasColumnType("geography(Point, 4326)");
+
+                    b.Property<string>("PriceRateSnapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("RiderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("RiderId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("RideRequests");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RiderStatus", b =>
+                {
+                    b.Property<string>("RiderId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ApprovalStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsOnline")
+                        .HasColumnType("boolean");
+
+                    b.Property<Point>("LastLocation")
+                        .HasColumnType("geography(Point, 4326)");
+
+                    b.Property<DateTime>("LastSeen")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RiderTier")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("RiderId");
+
+                    b.ToTable("RiderStatuses");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.TrackingLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<Point>("Coordinates")
+                        .IsRequired()
+                        .HasColumnType("geography(Point, 4326)");
+
+                    b.Property<string>("RideId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RideId");
+
+                    b.HasIndex("Timestamp");
+
+                    b.ToTable("TrackingLogs");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.User", b =>
                 {
                     b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<string>("City")
                         .HasColumnType("text");
 
                     b.Property<string>("CreatedDate")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DateOfBirth")
+                        .HasColumnType("text");
+
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Faculty")
                         .HasColumnType("text");
 
                     b.Property<int>("IsActive")
                         .HasColumnType("integer");
 
                     b.Property<string>("LastLoginDate")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MobileNumber")
                         .HasColumnType("text");
 
                     b.Property<string>("PasswordHash")
@@ -187,8 +391,14 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StudentId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Username")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Year")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -218,9 +428,54 @@ namespace NearU_Backend_Revised.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RideRequest", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "Rider")
+                        .WithMany()
+                        .HasForeignKey("RiderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NearU_Backend_Revised.Models.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rider");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RiderStatus", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("RiderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.TrackingLog", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.RideRequest", "RideRequest")
+                        .WithMany("TrackingLogs")
+                        .HasForeignKey("RideId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RideRequest");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.GiftShop", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.RideRequest", b =>
+                {
+                    b.Navigation("TrackingLogs");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.User", b =>

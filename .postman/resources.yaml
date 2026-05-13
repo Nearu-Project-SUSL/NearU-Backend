@@ -1,7 +1,0 @@
-# Use this workspace to collaborate
-workspace:
-  id: a24861d1-61d5-45ba-84a6-9651d5d09bdf
-
-localResources:
-  specs:
-    - ..\obj\Debug\net10.0\EndpointInfo\NearU_Backend_Revised.json
