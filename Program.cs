@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NearU_Backend_Revised.BackgroundServices;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
@@ -137,6 +138,12 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
+// Rides feature
+builder.Services.AddScoped<IRideRepository, RideRepository>();
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddHostedService<GhostRiderWorker>();
+
+// Configure Database (PostgreSQL)
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
@@ -156,6 +163,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorCodesToAdd: null
         );
         npgsqlOptions.CommandTimeout(30);
+        npgsqlOptions.UseNetTopologySuite(); //tells EF to map Point type to PostGIS geography
     });
 });
 
@@ -228,6 +236,38 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
         context.Database.Migrate();
+
+        // Ensure GiftShop tables exist in case EF Migrations History is out of sync
+        context.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""GiftShops"" (
+                ""Id"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""ImageUrl"" character varying(500),
+                ""LocationName"" character varying(150) NOT NULL,
+                ""Phone"" character varying(20) NOT NULL,
+                ""Email"" character varying(150),
+                ""Address"" character varying(500) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftShops"" PRIMARY KEY (""Id"")
+            );
+
+            CREATE TABLE IF NOT EXISTS ""GiftProducts"" (
+                ""Id"" uuid NOT NULL,
+                ""GiftShopId"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""PhotoUrl"" character varying(500),
+                ""Price"" numeric(18,2) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftProducts"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_GiftProducts_GiftShops_GiftShopId"" FOREIGN KEY (""GiftShopId"") REFERENCES ""GiftShops"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+        ");
     }
     catch (Exception ex)
     {
