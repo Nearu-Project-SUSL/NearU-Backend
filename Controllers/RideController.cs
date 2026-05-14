@@ -19,6 +19,69 @@ public class RideController : ControllerBase
         _rideService = rideService;
     }
 
+    // ─── Fare Estimate ──────────────────────────────────────────────────────────
+
+    /// <summary>GET /api/rides/estimate — no ride is created, pure fare calculation.</summary>
+    [HttpGet("rides/estimate")]
+    public async Task<IActionResult> GetEstimate(
+        [FromQuery] double pickupLat, [FromQuery] double pickupLng,
+        [FromQuery] double dropoffLat, [FromQuery] double dropoffLng,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var estimate = await _rideService.EstimateFareAsync(pickupLat, pickupLng, dropoffLat, dropoffLng, cancellationToken);
+            return Ok(ApiResponse<FareEstimateResponseDto>.SuccessResponse("Fare estimate calculated.", estimate));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
+    // ─── Ride History ────────────────────────────────────────────────────────────
+
+    /// <summary>GET /api/rides/history — paginated history for the logged-in user (student or rider).</summary>
+    [HttpGet("rides/history")]
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            var history = await _rideService.GetHistoryAsync(userId, page, pageSize, cancellationToken);
+            return Ok(ApiResponse<IEnumerable<RideHistoryDto>>.SuccessResponse("History fetched.", history));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
+    /// <summary>POST /api/rides/history/{rideId}/rate — rate a completed ride (1–5 stars).</summary>
+    [HttpPost("rides/history/{rideId}/rate")]
+    public async Task<IActionResult> RateRide(string rideId, [FromBody] RateRideRequestDto request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            await _rideService.RateRideAsync(userId, rideId, request.Rating, cancellationToken);
+            return Ok(ApiResponse<object>.SuccessResponse("Rating submitted. Thank you!", new { rideId, request.Rating }));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
+    // ─── Ride Requests ───────────────────────────────────────────────────────────
+
     [HttpPost("requests")]
     public async Task<IActionResult> CreateRequest([FromBody] CreateRideRequestDto request, CancellationToken cancellationToken)
     {
