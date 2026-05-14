@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
-using NearU_Backend_Revised.BackgroundServices;
 using NearU_Backend_Revised.Hubs;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Data;
