@@ -58,10 +58,17 @@ public class RideSummaryDto
 {
     public string RideId { get; set; } = string.Empty;
     public RideRequestStatus Status { get; set; }
+    public RideServiceType ServiceType { get; set; }
     public string StudentId { get; set; } = string.Empty;
     public string? RiderId { get; set; }
     public decimal EstimatedFare { get; set; }
     public decimal DistanceKm { get; set; }
+    // Pickup coordinates — used by client to render map pins
+    public double PickupLatitude { get; set; }
+    public double PickupLongitude { get; set; }
+    // Dropoff coordinates
+    public double DropoffLatitude { get; set; }
+    public double DropoffLongitude { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? OtpExpiresAt { get; set; }
 }

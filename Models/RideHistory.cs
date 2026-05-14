@@ -20,6 +20,12 @@ public class RideHistory
 
     public decimal CalculatedDistance { get; set; }
 
+    /// <summary>Rating the student gave the rider (1–5). Null until rated.</summary>
+    public int? RiderRating { get; set; }
+
+    /// <summary>Rating the rider gave the student (1–5). Null until rated.</summary>
+    public int? StudentRating { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime CompletedAt { get; set; } = DateTime.UtcNow;
