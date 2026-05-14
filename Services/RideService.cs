@@ -354,6 +354,89 @@ public class RideService : IRideService
         return pendingRides.Select(MapSummary);
     }
 
+    /// <summary>
+    /// Pure fare calculation — does not create any database record.
+    /// Used by the client to show an estimate before the student confirms.
+    /// </summary>
+    public Task<FareEstimateResponseDto> EstimateFareAsync(
+        double pickupLat, double pickupLng,
+        double dropoffLat, double dropoffLng,
+        CancellationToken cancellationToken = default)
+    {
+        var distanceKm = CalculateDistanceKm(pickupLat, pickupLng, dropoffLat, dropoffLng);
+        var estimatedFare = _rideSettings.BaseFare + ((decimal)distanceKm * _rideSettings.RatePerKm);
+
+        return Task.FromResult(new FareEstimateResponseDto
+        {
+            DistanceKm = decimal.Round((decimal)distanceKm, 3, MidpointRounding.AwayFromZero),
+            EstimatedFare = decimal.Round(estimatedFare, 2, MidpointRounding.AwayFromZero),
+            BaseFare = _rideSettings.BaseFare,
+            RatePerKm = _rideSettings.RatePerKm
+        });
+    }
+
+    /// <summary>
+    /// Returns paginated ride history for the authenticated user (works for both students and riders).
+    /// </summary>
+    public async Task<IEnumerable<RideHistoryDto>> GetHistoryAsync(string userId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        page = Math.Max(1, page);
+
+        var history = await _dbContext.RideHistories
+            .Where(h => h.StudentId == userId || h.RiderId == userId)
+            .OrderByDescending(h => h.CompletedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return history.Select(h => new RideHistoryDto
+        {
+            HistoryId = h.Id,
+            RideId = h.RideId,
+            StudentId = h.StudentId,
+            RiderId = h.RiderId,
+            ServiceType = h.ServiceType,
+            FinalFare = h.FinalFare,
+            DistanceKm = h.CalculatedDistance,
+            CompletedAt = h.CompletedAt,
+            RiderRating = h.RiderRating,
+            StudentRating = h.StudentRating
+        });
+    }
+
+    /// <summary>
+    /// Allows either party to submit a rating (1–5) for a completed ride.
+    /// A student rates the rider; a rider rates the student.
+    /// </summary>
+    public async Task RateRideAsync(string userId, string rideId, int rating, CancellationToken cancellationToken = default)
+    {
+        if (rating is < 1 or > 5)
+            throw new ArgumentOutOfRangeException(nameof(rating), "Rating must be between 1 and 5.");
+
+        var history = await _dbContext.RideHistories.FirstOrDefaultAsync(h => h.RideId == rideId, cancellationToken)
+            ?? throw new InvalidOperationException("Ride history record not found. Only completed rides can be rated.");
+
+        if (history.StudentId == userId)
+        {
+            if (history.RiderRating.HasValue)
+                throw new InvalidOperationException("You have already rated this ride.");
+            history.RiderRating = rating;
+        }
+        else if (history.RiderId == userId)
+        {
+            if (history.StudentRating.HasValue)
+                throw new InvalidOperationException("You have already rated this ride.");
+            history.StudentRating = rating;
+        }
+        else
+        {
+            throw new UnauthorizedAccessException("You were not a participant in this ride.");
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
@@ -372,10 +455,16 @@ public class RideService : IRideService
         {
             RideId = ride.Id,
             Status = ride.Status,
+            ServiceType = ride.ServiceType,
             StudentId = ride.StudentId,
             RiderId = ride.RiderId,
             EstimatedFare = ride.EstimatedFare,
             DistanceKm = ride.CalculatedDistance,
+            // PostGIS uses (X=Longitude, Y=Latitude) convention
+            PickupLatitude = ride.PickupLocation?.Y ?? 0,
+            PickupLongitude = ride.PickupLocation?.X ?? 0,
+            DropoffLatitude = ride.DropoffLocation?.Y ?? 0,
+            DropoffLongitude = ride.DropoffLocation?.X ?? 0,
             CreatedAt = ride.CreatedAt,
             OtpExpiresAt = ride.OtpExpiresAt
         };

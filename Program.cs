@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
-using NearU_Backend_Revised.BackgroundServices;
 using NearU_Backend_Revised.Hubs;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Data;
@@ -103,6 +102,21 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromMinutes(5)
     };
 
+    // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
+    // JWT as ?access_token=... in the query string. This reads it transparently.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 
 });
 
