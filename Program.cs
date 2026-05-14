@@ -236,6 +236,38 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
         context.Database.Migrate();
+
+        // Ensure GiftShop tables exist in case EF Migrations History is out of sync
+        context.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""GiftShops"" (
+                ""Id"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""ImageUrl"" character varying(500),
+                ""LocationName"" character varying(150) NOT NULL,
+                ""Phone"" character varying(20) NOT NULL,
+                ""Email"" character varying(150),
+                ""Address"" character varying(500) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftShops"" PRIMARY KEY (""Id"")
+            );
+
+            CREATE TABLE IF NOT EXISTS ""GiftProducts"" (
+                ""Id"" uuid NOT NULL,
+                ""GiftShopId"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""PhotoUrl"" character varying(500),
+                ""Price"" numeric(18,2) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftProducts"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_GiftProducts_GiftShops_GiftShopId"" FOREIGN KEY (""GiftShopId"") REFERENCES ""GiftShops"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+        ");
     }
     catch (Exception ex)
     {
@@ -272,5 +304,8 @@ app.MapHub<RidesHub>("/hubs/rides", options =>
     // Enable stateful reconnects to handle clients losing connection temporarily
     options.AllowStatefulReconnects = true;
 });
+
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
 
 app.Run();

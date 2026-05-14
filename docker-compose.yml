@@ -1,6 +1,6 @@
 services:
   nearu-db:
-    image: postgres:17-alpine
+    image: postgis/postgis:17-3.5-alpine
     container_name: nearu-db
     restart: always
     ports:

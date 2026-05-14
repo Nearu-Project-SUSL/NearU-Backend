@@ -34,6 +34,25 @@ public class RideController : ControllerBase
         }
     }
 
+    [HttpGet("requests/nearby")]
+    public async Task<IActionResult> GetNearbyRequests([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] double radiusMeters = 5000, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var riderId = RequireUserId();
+            var result = await _rideService.GetNearbyRequestsAsync(riderId, latitude, longitude, radiusMeters, cancellationToken);
+            return Ok(ApiResponse<IEnumerable<RideSummaryDto>>.SuccessResponse("Nearby requests fetched.", result));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
     [HttpPost("accept")]
     public async Task<IActionResult> Accept([FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
