@@ -32,6 +32,9 @@ services:
       - ImageKit__PublicKey=${IMAGEKIT_PUBLIC_KEY}
       - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
       - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
+      - Firebase__CredentialsPath=/app/firebase-adminsdk.json
+    volumes:
+      - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:
       - nearu-internal
       - nearu-proxy
