@@ -423,7 +423,7 @@ public class RideService : IRideService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<RideSummaryDto> RideCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
+    public async Task<RideSummaryDto> RiderCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
 
