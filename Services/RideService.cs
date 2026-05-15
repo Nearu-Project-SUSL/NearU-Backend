@@ -141,9 +141,9 @@ public class RideService : IRideService
     public async Task<RideSummaryDto> VerifyAsync(string riderId, string rideId, string otp, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
-        if (ride.Status != RideRequestStatus.InProgress && ride.Status != RideRequestStatus.Arrived)
+        if (ride.Status != RideRequestStatus.Arrived && ride.Status != RideRequestStatus.Accepted)
         {
-            throw new InvalidOperationException("OTP can only be verified for rides that are in progress.");
+            throw new InvalidOperationException("OTP can only be verified before the ride starts.");
         }
 
         if (ride.OtpExpiresAt is null || ride.OtpExpiresAt <= DateTime.UtcNow)
@@ -167,28 +167,14 @@ public class RideService : IRideService
             throw new InvalidOperationException("Invalid OTP.");
         }
 
-        _stateMachine.EnsureTransition(ride.Status, RideRequestStatus.Completed);
-        ride.Status = RideRequestStatus.Completed;
-        ride.CompletedAt = DateTime.UtcNow;
+        ride.Status = RideRequestStatus.InProgress;
+        ride.InProgressAt = DateTime.UtcNow;
+        ride.OTPAttempts = 0;
         ride.UpdatedAt = DateTime.UtcNow;
-
-        if (!await _dbContext.RideHistories.AnyAsync(h => h.RideId == ride.Id, cancellationToken))
-        {
-            _dbContext.RideHistories.Add(new RideHistory
-            {
-                RideId = ride.Id,
-                StudentId = ride.StudentId,
-                RiderId = ride.RiderId,
-                ServiceType = ride.ServiceType,
-                FinalFare = ride.EstimatedFare,
-                CalculatedDistance = ride.CalculatedDistance,
-                CreatedAt = ride.CreatedAt,
-                CompletedAt = ride.CompletedAt ?? DateTime.UtcNow
-            });
-        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
         return MapSummary(ride);
     }
 
@@ -437,6 +423,25 @@ public class RideService : IRideService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<RideSummaryDto> RideCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
+    {
+        var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
+
+        if(ride.Status != RideRequestStatus.InProgress)
+            throw new InvalidOperationException("Ride must be in progress to mark as complete.");
+
+        ride.Status = RideRequestStatus.CompletedByRider;
+        ride.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Notify about the state change to student (ask if the ride is complete)
+        await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        return MapSummary(ride);
+    }
+
+    
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
