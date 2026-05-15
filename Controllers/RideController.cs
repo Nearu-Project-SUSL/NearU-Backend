@@ -173,6 +173,40 @@ public class RideController : ControllerBase
         }
     }
 
+    [HttpPost("rider-complete")]
+    public async Task<IActionResult> RiderComplete(
+        [FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var riderId = RequireUserId();
+            var result = await _rideService.RiderCompleteAsync(riderId, request.RideId, cancellationToken);
+            return Ok(ApiResponse<RideSummaryDto>.SuccessResponse(
+                "Ride marked complete. Waiting for student confirmation.", result));
+        }
+        catch (UnauthorizedAccessException ex) {return Forbid(ex.Message);}
+        catch (Exception ex) {return BadRequest(ApiResponse<object>.FailResponse(ex.Message));}
+    }
+
+    [HttpPost("student-confirm")]
+    public async Task<IActionResult> StudentConfirm(
+        [FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var studentId = RequireUserId();
+            var (success, error) = await _rideService.StudentConfirmCompleteAsync(
+                studentId, request.RideId, cancellationToken);
+
+            if (!success)
+                return BadRequest(ApiResponse<object>.FailResponse(error!));
+
+            return Ok(ApiResponse<object>.SuccessResponse("Ride completed.", null));
+        }
+        catch (Exception ex) {return BadRequest(ApiResponse<object>.FailResponse(ex.Message));}
+    }
+
+
     [HttpPost("otp/refresh")]
     public async Task<IActionResult> RefreshOtp([FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
