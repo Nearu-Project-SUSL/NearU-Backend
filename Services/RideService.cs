@@ -21,17 +21,20 @@ public class RideService : IRideService
     private readonly IRideStateMachine _stateMachine;
     private readonly IRideNotificationService _rideNotificationService;
     private readonly GeometryFactory _geometryFactory;
+    private readonly ILogger<RideService> _logger;
 
     public RideService(
         ApplicationDbContext dbContext,
         IOptions<RideSettings> rideSettings,
         IRideStateMachine stateMachine,
-        IRideNotificationService rideNotificationService)
+        IRideNotificationService rideNotificationService,
+        ILogger<RideService> logger)
     {
         _dbContext = dbContext;
         _rideSettings = rideSettings.Value;
         _stateMachine = stateMachine;
         _rideNotificationService = rideNotificationService;
+        _logger = logger;
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
     }
 
@@ -111,7 +114,31 @@ public class RideService : IRideService
         _dbContext.RideRequests.Add(ride);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Notify online riders via SignalR (app is open)
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        // Push to riders whose app is backgrounded/closed — fire-and-forget so it never delays the response
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var nearbyRiderIds = await _dbContext.RiderStatuses
+                    .Where(rs =>
+                        rs.IsOnline &&
+                        rs.ApprovalStatus == RiderApprovalStatus.Approved &&
+                        rs.RiderId != studentId)
+                    .Select(rs => rs.RiderId)
+                    .ToListAsync(CancellationToken.None);
+
+                if (nearbyRiderIds.Any())
+                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, nearbyRiderIds, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Background FCM push failed for ride {RideId}", ride.Id);
+            }
+        }, CancellationToken.None);
+
         return MapSummary(ride);
     }
 
