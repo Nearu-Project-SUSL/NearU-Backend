@@ -17,5 +17,7 @@ public interface IRideService
     Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 5000, CancellationToken cancellationToken = default);
     Task<IEnumerable<RideHistoryDto>> GetHistoryAsync(string userId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default);
     Task RateRideAsync(string userId, string rideId, int rating, CancellationToken cancellationToken = default);
+    Task<RideSummaryDto> RiderCompleteAsync(string riderId ,string rideId, CancellationToken cancellationToken = default);
+    Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
 }
 
