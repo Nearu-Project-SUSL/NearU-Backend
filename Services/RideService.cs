@@ -441,7 +441,40 @@ public class RideService : IRideService
         return MapSummary(ride);
     }
 
-    
+    public async Task<(bool success, string error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
+    {
+        var ride = await _dbContext.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+        
+        if (ride is null || ride.StudentId != studentId)
+            return(false, "Ride not found");
+        if (ride.Status != RideRequestStatus.CompletedByRider)
+            return (false, "Ride is not marked as completed by the rider yet");
+
+        ride.Status = RideRequestStatus.Completed;
+        ride.CompletedAt = DateTime.UtcNow;
+        ride.UpdatedAt = DateTime.UtcNow;
+
+        if (!await _dbContext.RideHistories.AnyAsync(h => h.RideId == rideId, cancellationToken))
+        {
+            _dbContext.RideHistories.Add(new RideHistory
+            {
+                RideId             = ride.Id,
+                StudentId          = ride.StudentId,
+                RiderId            = ride.RiderId,
+                ServiceType        = ride.ServiceType,
+                FinalFare          = ride.EstimatedFare,
+                CalculatedDistance = ride.CalculatedDistance,
+                CreatedAt          = ride.CreatedAt,
+                CompletedAt        = ride.CompletedAt ?? DateTime.UtcNow
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        return (true, null);
+    }
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
