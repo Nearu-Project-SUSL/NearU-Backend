@@ -35,6 +35,32 @@ public class RideService : IRideService
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
     }
 
+    /// <summary>
+    /// Returns the active (non-terminal) ride for the given user — works for both students and riders.
+    /// Returns null if no active ride exists. Used by mobile clients on app relaunch to rehydrate state.
+    /// </summary>
+    public async Task<RideSummaryDto?> GetActiveRideAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        // Terminal statuses — anything else is "active"
+        var terminalStatuses = new[]
+        {
+            RideRequestStatus.Completed,
+            RideRequestStatus.Cancelled,
+            RideRequestStatus.Interrupted,
+            RideRequestStatus.Expired,
+            RideRequestStatus.OTPLocked
+        };
+
+        var ride = await _dbContext.RideRequests
+            .Where(r =>
+                (r.StudentId == userId || r.RiderId == userId) &&
+                !terminalStatuses.Contains(r.Status))
+            .OrderByDescending(r => r.UpdatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return ride is null ? null : MapSummary(ride);
+    }
+
     public async Task<RideSummaryDto> CreateRequestAsync(string studentId, CreateRideRequestDto request, CancellationToken cancellationToken = default)
     {
         if (!request.ConfirmEstimate)
@@ -441,20 +467,21 @@ public class RideService : IRideService
         return MapSummary(ride);
     }
 
-    public async Task<(bool success, string error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
+    public async Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
     {
         var ride = await _dbContext.RideRequests
             .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
-        
+
         if (ride is null || ride.StudentId != studentId)
-            return(false, "Ride not found");
+            return (false, "Ride not found or you are not the student for this ride.");
         if (ride.Status != RideRequestStatus.CompletedByRider)
-            return (false, "Ride is not marked as completed by the rider yet");
+            return (false, "Ride has not been marked complete by the rider yet.");
 
         ride.Status = RideRequestStatus.Completed;
         ride.CompletedAt = DateTime.UtcNow;
         ride.UpdatedAt = DateTime.UtcNow;
 
+        // Create history record if it doesn't exist yet (idempotent)
         if (!await _dbContext.RideHistories.AnyAsync(h => h.RideId == rideId, cancellationToken))
         {
             _dbContext.RideHistories.Add(new RideHistory
@@ -475,6 +502,7 @@ public class RideService : IRideService
 
         return (true, null);
     }
+
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)

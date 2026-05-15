@@ -38,3 +38,13 @@ public class FareEstimateResponseDto
     public decimal BaseFare { get; set; }
     public decimal RatePerKm { get; set; }
 }
+
+/// <summary>
+/// Request body for POST/DELETE /api/rides/device-token
+/// </summary>
+public class FcmTokenRequestDto
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.MaxLength(512)]
+    public string Token { get; set; } = string.Empty;
+}

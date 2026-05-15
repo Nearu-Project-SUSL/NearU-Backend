@@ -13,10 +13,46 @@ namespace NearU_Backend_Revised.Controllers;
 public class RideController : ControllerBase
 {
     private readonly IRideService _rideService;
+    private readonly IFcmTokenService _fcmTokenService;
 
-    public RideController(IRideService rideService)
+    public RideController(IRideService rideService, IFcmTokenService fcmTokenService)
     {
         _rideService = rideService;
+        _fcmTokenService = fcmTokenService;
+    }
+
+    // ─── FCM Device Token ────────────────────────────────────────────────────────
+
+    /// <summary>POST /api/rides/device-token — call after login to enable push notifications.</summary>
+    [HttpPost("rides/device-token")]
+    public async Task<IActionResult> RegisterDeviceToken([FromBody] FcmTokenRequestDto request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            await _fcmTokenService.UpsertTokenAsync(userId, request.Token, cancellationToken);
+            return Ok(ApiResponse<object>.SuccessResponse("Device registered for push notifications.", null));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
+    /// <summary>DELETE /api/rides/device-token — call on logout to remove push notifications.</summary>
+    [HttpDelete("rides/device-token")]
+    public async Task<IActionResult> RemoveDeviceToken([FromBody] FcmTokenRequestDto request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            await _fcmTokenService.RemoveTokenAsync(userId, request.Token, cancellationToken);
+            return Ok(ApiResponse<object>.SuccessResponse("Device token removed.", null));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
     }
 
     // ─── Fare Estimate ──────────────────────────────────────────────────────────
@@ -73,6 +109,26 @@ public class RideController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             return Forbid(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
+    // ─── Active Ride ──────────────────────────────────────────────────────────────
+
+    /// <summary>GET /api/rides/active — returns current in-progress ride or 204 if none.</summary>
+    [HttpGet("rides/active")]
+    public async Task<IActionResult> GetActiveRide(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            var ride = await _rideService.GetActiveRideAsync(userId, cancellationToken);
+            if (ride is null)
+                return NoContent(); // 204 — no active ride, client shows "Find a ride" screen
+            return Ok(ApiResponse<RideSummaryDto>.SuccessResponse("Active ride found.", ride));
         }
         catch (Exception ex)
         {
