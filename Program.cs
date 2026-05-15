@@ -152,12 +152,8 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
-// Rides feature
-builder.Services.AddScoped<IRideRepository, RideRepository>();
-builder.Services.AddScoped<IRideService, RideService>();
-builder.Services.AddHostedService<GhostRiderWorker>();
 
-// Configure Database (PostgreSQL)
+// Rides feature (registered below with full setup)
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
@@ -177,7 +173,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorCodesToAdd: null
         );
         npgsqlOptions.CommandTimeout(30);
-        npgsqlOptions.UseNetTopologySuite(); //tells EF to map Point type to PostGIS geography
+        npgsqlOptions.UseNetTopologySuite(); // map Point type to PostGIS geography
     });
 });
 
@@ -189,13 +185,14 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
-// Configure RideSettings
 builder.Services.Configure<RideSettings>(
     builder.Configuration.GetSection("RideSettings"));
 
+builder.Services.AddScoped<IRideRepository, RideRepository>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
 builder.Services.AddScoped<IRideNotificationService, RideNotificationService>();
+builder.Services.AddScoped<IFcmTokenService, FcmTokenService>();
 builder.Services.AddHostedService<GhostRiderCleanupWorker>();
 builder.Services.AddHostedService<RideLifecycleWorker>();
 

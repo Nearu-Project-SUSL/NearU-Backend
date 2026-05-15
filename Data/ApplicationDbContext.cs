@@ -27,6 +27,7 @@ namespace NearU_Backend_Revised.Data
         public DbSet<TrackingLog> TrackingLogs { get; set; } = null!;
         public DbSet<RideRequest> RideRequests { get; set; } = null!;
         public DbSet<RideHistory> RideHistories { get; set; } = null!;
+        public DbSet<UserFcmToken> UserFcmTokens { get; set; } = null!;
 
         // Add these new DbSets
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
@@ -250,6 +251,27 @@ namespace NearU_Backend_Revised.Data
                 entity.HasIndex(h => h.CompletedAt);
             });
 
+            // Configure UserFcmToken
+            modelBuilder.Entity<UserFcmToken>(entity =>
+            {
+                entity.HasKey(t => t.Id);
+
+                entity.Property(t => t.Token)
+                    .IsRequired()
+                    .HasMaxLength(512);
+
+                // A token string must be unique across all users
+                entity.HasIndex(t => t.Token)
+                    .IsUnique();
+
+                // Lookup: all tokens for a specific user
+                entity.HasIndex(t => t.UserId);
+
+                entity.HasOne(t => t.User)
+                    .WithMany()
+                    .HasForeignKey(t => t.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
             modelBuilder.Entity<Accommodation>(entity =>
             {
