@@ -15,6 +15,7 @@ using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -146,6 +147,11 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
+//testimonial
+builder.Services.AddScoped<ITestimonialRepository, TestimonialRepository>();
+builder.Services.AddScoped<ITestimonialService, TestimonialService>();
+
+
 // Accommodation feature
 builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
 builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
@@ -153,7 +159,6 @@ builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
 
-// Rides feature (registered below with full setup)
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
@@ -305,6 +310,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 app.UseRouting();
+
+app.UseMiddleware<JwtMiddleware>();
 
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
