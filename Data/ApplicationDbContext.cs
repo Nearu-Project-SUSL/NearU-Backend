@@ -21,15 +21,14 @@ namespace NearU_Backend_Revised.Data
         public DbSet<MenuItem> MenuItems { get; set; } = null!;
         public DbSet<AccommodationItem> AccommodationItems { get; set; } = null!;
         public DbSet<Job> Jobs { get; set; } = null!;
+        public DbSet<Testimonial> Testimonials { get; set; }
         
-        // Ride & Tracking DbSets
         public DbSet<RiderStatus> RiderStatuses { get; set; } = null!;
         public DbSet<TrackingLog> TrackingLogs { get; set; } = null!;
         public DbSet<RideRequest> RideRequests { get; set; } = null!;
         public DbSet<RideHistory> RideHistories { get; set; } = null!;
         public DbSet<UserFcmToken> UserFcmTokens { get; set; } = null!;
 
-        // Add these new DbSets
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
 
