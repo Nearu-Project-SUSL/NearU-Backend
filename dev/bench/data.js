@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778870600702,
+  "lastUpdate": 1778917619958,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -640,6 +640,58 @@ window.BENCHMARK_DATA = {
             "value": 457.9286518096924,
             "unit": "ns",
             "range": "± 0.7844311961367695"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "Thimira Niranjaya",
+            "name": "Thimira Niranjaya"
+          },
+          "committer": {
+            "email": "Thimira Niranjaya",
+            "name": "Thimira Niranjaya"
+          },
+          "distinct": true,
+          "id": "fa10fb1790ae6ec39bba91dbdf29ddee53b949ab",
+          "message": "feat: add Google authentication support via new controller endpoint and service logic",
+          "timestamp": "2026-05-16T13:15:40+05:30",
+          "tree_id": "7d6b58d1ac82c18c1866c511a80d030f33fcb6cf",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/fa10fb1790ae6ec39bba91dbdf29ddee53b949ab"
+        },
+        "date": 1778917619528,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 6933.321787516276,
+            "unit": "ns",
+            "range": "± 154.21613408585182"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 147655280.16666666,
+            "unit": "ns",
+            "range": "± 360326.93204421434"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14517.19004313151,
+            "unit": "ns",
+            "range": "± 15.025115317884914"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1188.563367207845,
+            "unit": "ns",
+            "range": "± 3.795482253350991"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 446.12493499120075,
+            "unit": "ns",
+            "range": "± 2.6090145458660636"
           }
         ]
       }
