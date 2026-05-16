@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778917619958,
+  "lastUpdate": 1778917890257,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -692,6 +692,58 @@ window.BENCHMARK_DATA = {
             "value": 446.12493499120075,
             "unit": "ns",
             "range": "± 2.6090145458660636"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "Thimira Niranjaya",
+            "name": "Thimira Niranjaya"
+          },
+          "committer": {
+            "email": "Thimira Niranjaya",
+            "name": "Thimira Niranjaya"
+          },
+          "distinct": true,
+          "id": "6c3e59f45a6cc81306ebbe0fd6dbb1a28170995d",
+          "message": "fix: restore missing packages and project config lost during file copy",
+          "timestamp": "2026-05-16T13:20:10+05:30",
+          "tree_id": "110208377c617a5d05e46546003f9e8384598b26",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/6c3e59f45a6cc81306ebbe0fd6dbb1a28170995d"
+        },
+        "date": 1778917889544,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7123.563771565755,
+            "unit": "ns",
+            "range": "± 134.05347517219153"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146797434.66666666,
+            "unit": "ns",
+            "range": "± 376724.6694563827"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14010.026575724283,
+            "unit": "ns",
+            "range": "± 117.3173733238918"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1294.1447772979736,
+            "unit": "ns",
+            "range": "± 7.64115279336381"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 437.4439616203308,
+            "unit": "ns",
+            "range": "± 7.2571582488133055"
           }
         ]
       }
