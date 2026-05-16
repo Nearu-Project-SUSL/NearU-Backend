@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using NearU_Backend_Revised.DTOs.Auth;
@@ -64,6 +64,61 @@ namespace NearU_Backend_Revised.Services
             var user = await _userRepo.GetUserByEmail(request.Email);
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 throw new Exception("Invalid credentials");
+
+            // Generate access token
+            var accessToken = _tokenService.GenerateAccessToken(user);
+
+            // Generate refresh token
+            var refreshToken = _tokenService.GenerateRefreshToken(user.Id);
+            await _refreshTokenRepo.SaveRefreshTokenAsync(refreshToken);
+
+            // Build response
+            return new AuthResponse
+            {
+                UserId = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.Role,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken.Token,
+                AccessTokenExpiry = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpiryInMinutes),
+                RefreshTokenExpiry = refreshToken.ExpiryDate
+            };
+        }
+
+        public async Task<AuthResponse> GoogleLoginAsync(GoogleLoginRequest request)
+        {
+            // Verify access token with Google
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync($"https://www.googleapis.com/oauth2/v3/userinfo?access_token={request.Token}");
+            
+            if (!response.IsSuccessStatusCode)
+                throw new Exception("Invalid Google token");
+
+            var payload = await System.Text.Json.JsonSerializer.DeserializeAsync<GoogleUserInfoPayload>(
+                await response.Content.ReadAsStreamAsync()
+            );
+
+            if (payload == null || string.IsNullOrEmpty(payload.Email))
+                throw new Exception("Failed to retrieve user information from Google");
+
+            var user = await _userRepo.GetUserByEmail(payload.Email);
+            
+            if (user == null)
+            {
+                // Create user if not exists
+                user = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Username = payload.Name ?? payload.Email.Split('@')[0],
+                    Email = payload.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password
+                    Role = "Student", // Default role
+                    CreatedDate = DateTime.UtcNow.ToString("o"),
+                    IsActive = 1
+                };
+                await _userRepo.AddUser(user);
+            }
 
             // Generate access token
             var accessToken = _tokenService.GenerateAccessToken(user);
