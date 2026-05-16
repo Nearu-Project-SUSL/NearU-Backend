@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.DTOs.Auth;
 using NearU_Backend_Revised.Models;
@@ -46,6 +46,20 @@ namespace NearU_Backend_Revised.Controllers
             {
                 var authResponse = await _userService.Login(request);
                 return Ok(ApiResponse<object>.SuccessResponse("Login successful", authResponse)); 
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request)
+        {
+            try
+            {
+                var authResponse = await _userService.GoogleLoginAsync(request);
+                return Ok(ApiResponse<object>.SuccessResponse("Google Login successful", authResponse));
             }
             catch (Exception ex)
             {
