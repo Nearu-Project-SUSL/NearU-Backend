@@ -21,6 +21,21 @@ namespace NearU_Backend_Revised.Models
 
         public string? PhotoUrl { get; set; }
 
+        // Type of accommodation: Boarding, Annex, Apartment
+        public string? Type { get; set; }
+
+        // Distance from campus in kilometers
+        public decimal DistanceKm { get; set; } = 0;
+
+        // Monthly rent in LKR
+        public decimal MonthlyRent { get; set; } = 0;
+
+        // Number of available beds
+        public int AvailableBeds { get; set; } = 0;
+
+        // Comma-separated list of amenities
+        public string? Amenities { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation property for Accommodation Items

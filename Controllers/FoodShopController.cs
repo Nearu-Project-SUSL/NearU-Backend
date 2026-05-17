@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.FoodShop;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Enums;
 
 namespace NearU_Backend_Revised.Controllers
 {
@@ -16,11 +17,27 @@ namespace NearU_Backend_Revised.Controllers
             _service = service;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("categories")]
+        public IActionResult GetCategories()
         {
-            var shops = await _service.GetAllShopsAsync();
-            return Ok(shops);
+            return Ok(FoodCategory.AllowedCategories);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll(
+            [FromQuery] int page = 1, //read values from url
+            [FromQuery] int pageSize = 9,
+            [FromQuery] string? category = null,
+            [FromQuery] string? search = null
+        )
+        {
+            if (page < 1) page = 1; //page num can not be less than 1
+
+            if (pageSize < 1) pageSize = 9;
+            if (pageSize > 50) pageSize = 50;
+            
+            var result = await _service.GetAllShopsAsync(page, pageSize, category, search);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]

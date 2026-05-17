@@ -9,6 +9,7 @@ namespace NearU_Backend_Revised.Services
 {
     public class JobService : IJobService
     {
+        private static readonly TimeSpan NewJobWindow = TimeSpan.FromHours(24);
         private readonly IJobRepository _repository;
         private readonly UserRepository _userRepository;
 
@@ -17,10 +18,17 @@ namespace NearU_Backend_Revised.Services
             _repository = repository;
             _userRepository = userRepository;
         }
-        public async Task<IEnumerable<JobResponse>> GetAllJobsAsync()
+        public async Task<PagedJobResponse> GetAllJobsAsync(int page, int pageSize)
         {
-            var jobs = await _repository.GetAllJobsAsync();
-            return jobs.Select(j => MapToResponse(j));
+            var (jobs, totalCount) = await _repository.GetAllJobsAsync(page, pageSize);
+            return new PagedJobResponse
+            {
+                Items = jobs.Select(j => MapToResponse(j)),
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                CurrentPage = page,
+                PageSize = pageSize
+            };
         }
         public async Task<IEnumerable<JobResponse>> GetNewJobsAsync()
         {
@@ -149,7 +157,7 @@ namespace NearU_Backend_Revised.Services
                 LongDescription = job.LongDescription,
                 Requirements = requirements,
                 Tags = tags,
-                IsNew = job.IsNew,
+                IsNew = IsJobNew(job),
                 PostedBy = new PostedByInfo
                 {
                     UserId = job.PostedByUserId,
@@ -162,6 +170,12 @@ namespace NearU_Backend_Revised.Services
                 PostedAt = GetRelativeTime(job.CreatedAt)
             };
         }
+
+        private static bool IsJobNew(Job job)
+        {
+            return job.IsNew && DateTime.UtcNow - job.CreatedAt <= NewJobWindow;
+        }
+
         private static string GetRelativeTime(DateTime dateTime)
         {
             var timeSpan = DateTime.UtcNow - dateTime;

@@ -15,5 +15,7 @@ namespace NearU_Backend_Revised.DTOs.FoodShop
         public DateTime CreatedAt { get; set; }
 
         public string? PhotoUrl { get; set; }
+
+        public string? Category { get; set; } = "Other";
     }
 }

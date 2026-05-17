@@ -1,34 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NearU_Backend_Revised.Configuration;
-using NearU_Backend_Revised.Data;
-using NearU_Backend_Revised.Models;
-using NearU_Backend_Revised.Services;
-using NearU_Backend_Revised.Services.Interfaces;
-using NearU_Backend_Revised.Repositories;
-using NearU_Backend_Revised.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NearU_Backend_Revised.BackgroundServices;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
-
+using Microsoft.AspNetCore.HttpOverrides;
+using NearU_Backend_Revised.Hubs;
+using NearU_Backend_Revised.Configuration;
+using NearU_Backend_Revised.Data;
+using NearU_Backend_Revised.Models;
+using NearU_Backend_Revised.Repositories;
+using NearU_Backend_Revised.Repositories.Interfaces;
+using NearU_Backend_Revised.Services;
+using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Configure Kestrel to listen on Railway's PORT
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-
-// Log configuration for debugging
-Console.WriteLine("=== Configuration Debug ===");
-Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
-var connStr = builder.Configuration.GetConnectionString("PostgreSQL");
-Console.WriteLine($"ConnectionString exists: {!string.IsNullOrEmpty(connStr)}");
-if (!string.IsNullOrEmpty(connStr)) Console.WriteLine($"ConnectionString preview: {connStr.Substring(0, Math.Min(50, connStr.Length))}...");
-Console.WriteLine($"JWT SecretKey Length: {builder.Configuration["JwtSettings:SecretKey"]?.Length ?? 0}");
-Console.WriteLine($"JWT Issuer: {builder.Configuration["JwtSettings:Issuer"]}");
-Console.WriteLine("===========================");
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
@@ -46,6 +35,9 @@ builder.Services.AddControllers()
     });
 builder.Services.AddOpenApi();
 
+// Health checks — used by the Docker Compose healthcheck directive
+builder.Services.AddHealthChecks();
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -55,12 +47,11 @@ builder.Services.AddCors(options =>
               {
                   return origin.StartsWith("http://localhost") ||
                          origin.StartsWith("https://localhost") ||
-                         origin.EndsWith(".up.railway.app") || //Need to be removed out dated link
-                         origin.EndsWith(".ondigitalocean.app") ||
                          origin == "https://near-u-frontend-pi.vercel.app" ||
                          origin.EndsWith(".vercel.app") ||
                          origin == "https://nearusab.me" ||
-                         origin == "https://www.nearusab.me";
+                         origin == "https://www.nearusab.me" ||
+                         origin == "https://api.nearusab.me";
               })
               .AllowAnyHeader()
               .AllowAnyMethod()
@@ -84,10 +75,7 @@ builder.Services.AddRateLimiter(options =>
 // Register JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 if (string.IsNullOrEmpty(jwtSettings?.SecretKey))
-{
-    Console.WriteLine("ERROR: JWT SecretKey is not configured!");
-    throw new InvalidOperationException("JWT SecretKey is not configured. Please set JwtSettings__SecretKey environment variable.");
-}
+    throw new InvalidOperationException("JWT SecretKey is not configured. Set JwtSettings:SecretKey in appsettings or the JwtSettings__SecretKey environment variable.");
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 // Configure JWT Authentication
@@ -109,29 +97,28 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings?.Issuer,
         ValidAudience = jwtSettings?.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")),
-        ClockSkew = TimeSpan.FromMinutes(5) // Allow 5 minute clock skew
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
+        ),
+        ClockSkew = TimeSpan.FromMinutes(5)
     };
 
-    // Add events for debugging
+    // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
+    // JWT as ?access_token=... in the query string. This reads it transparently.
     options.Events = new JwtBearerEvents
     {
-        OnAuthenticationFailed = context =>
-        {
-            Console.WriteLine($"Authentication failed: {context.Exception.Message}");
-            return Task.CompletedTask;
-        },
         OnMessageReceived = context =>
         {
-            Console.WriteLine($"Token received: {(string.IsNullOrEmpty(context.Token) ? "No" : "Yes")}");
-            return Task.CompletedTask;
-        },
-        OnChallenge = context =>
-        {
-            Console.WriteLine($"Authentication challenge: {context.Error}, {context.ErrorDescription}");
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
             return Task.CompletedTask;
         }
     };
+
 });
 
 // Configure Authorization Policies
@@ -141,7 +128,7 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
     });
-    
+
     options.AddPolicy("RequireUserId", policy =>
     {
         policy.RequireAuthenticatedUser();
@@ -149,17 +136,21 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-//register imagekit settings
-builder.Services.Configure<ImageKitSetting>(
-    builder.Configuration.GetSection("ImageKit")
-);
+builder.Services.Configure<ImageKitSettings>(
+    builder.Configuration.GetSection("ImageKit"));
 
 // Food feature
 builder.Services.AddScoped<IFoodShopRepository, FoodShopRepository>();
 builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
 builder.Services.AddScoped<IFoodShopService, FoodShopService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
+
+//testimonial
+builder.Services.AddScoped<ITestimonialRepository, TestimonialRepository>();
+builder.Services.AddScoped<ITestimonialService, TestimonialService>();
+
 
 // Accommodation feature
 builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
@@ -167,29 +158,88 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
-// Configure Database (PostgreSQL only)
+
+// Gift feature
+builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
+builder.Services.AddScoped<IGiftShopService, GiftShopService>();
+
+// Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrEmpty(connectionString))
-{
-    Console.WriteLine("ERROR: PostgreSQL connection string is not configured!");
-    throw new InvalidOperationException("PostgreSQL connection string is not configured. Please set ConnectionStrings__PostgreSQL environment variable.");
-}
+    throw new InvalidOperationException("PostgreSQL connection string is not configured. Set ConnectionStrings:PostgreSQL in appsettings or the ConnectionStrings__PostgreSQL environment variable.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
-        npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+        npgsqlOptions.UseNetTopologySuite();
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null
+        );
         npgsqlOptions.CommandTimeout(30);
+        npgsqlOptions.UseNetTopologySuite(); // map Point type to PostGIS geography
     });
 });
 
-// Register repositories and services
+// Register other repositories and services
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
+
+builder.Services.Configure<RideSettings>(
+    builder.Configuration.GetSection("RideSettings"));
+
+builder.Services.AddScoped<IRideRepository, RideRepository>();
+builder.Services.AddScoped<IRideService, RideService>();
+builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
+builder.Services.AddScoped<IRideNotificationService, RideNotificationService>();
+builder.Services.AddScoped<IFcmTokenService, FcmTokenService>();
+builder.Services.AddHostedService<GhostRiderCleanupWorker>();
+builder.Services.AddHostedService<RideLifecycleWorker>();
+
+// Redis Integration
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnectionString;
+        options.InstanceName = "NearU_";
+    });
+    
+    // Add SignalR with Redis Backplane
+    builder.Services.AddSignalR().AddStackExchangeRedis(redisConnectionString, options => 
+    {
+        options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("NearU_SignalR");
+    });
+}
+else
+{
+    // Fallback to in-memory cache if Redis is not configured
+    builder.Services.AddDistributedMemoryCache();
+    
+    // Fallback to standard SignalR without backplane
+    builder.Services.AddSignalR();
+}
+
+// Firebase Admin Setup
+var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
+if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(firebaseCredentialsPath))
+{
+#pragma warning disable CS0618
+    using (var stream = new System.IO.FileStream(firebaseCredentialsPath, System.IO.FileMode.Open, System.IO.FileAccess.Read))
+    {
+        FirebaseAdmin.FirebaseApp.Create(new FirebaseAdmin.AppOptions
+        {
+            Credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromStream(stream)
+        });
+    }
+#pragma warning restore CS0618
+}
 
 
 var app = builder.Build();
@@ -202,11 +252,44 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
         context.Database.Migrate();
+
+        // Ensure GiftShop tables exist in case EF Migrations History is out of sync
+        context.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""GiftShops"" (
+                ""Id"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""ImageUrl"" character varying(500),
+                ""LocationName"" character varying(150) NOT NULL,
+                ""Phone"" character varying(20) NOT NULL,
+                ""Email"" character varying(150),
+                ""Address"" character varying(500) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftShops"" PRIMARY KEY (""Id"")
+            );
+
+            CREATE TABLE IF NOT EXISTS ""GiftProducts"" (
+                ""Id"" uuid NOT NULL,
+                ""GiftShopId"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""PhotoUrl"" character varying(500),
+                ""Price"" numeric(18,2) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftProducts"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_GiftProducts_GiftShops_GiftShopId"" FOREIGN KEY (""GiftShopId"") REFERENCES ""GiftShops"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+        ");
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        logger.LogCritical(ex, "FATAL: Database migration failed!");
+        throw;
     }
 }
 
@@ -220,10 +303,28 @@ if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Trust X-Forwarded-For and X-Forwarded-Proto from Nginx reverse proxy
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseRouting();
+
+app.UseMiddleware<JwtMiddleware>();
+
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<RidesHub>("/hubs/rides", options =>
+{
+    // Enable stateful reconnects to handle clients losing connection temporarily
+    options.AllowStatefulReconnects = true;
+});
+
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
 
 app.Run();
