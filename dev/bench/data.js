@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778996970093,
+  "lastUpdate": 1778997783164,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -850,6 +850,60 @@ window.BENCHMARK_DATA = {
             "value": 458.71830256779987,
             "unit": "ns",
             "range": "± 3.685575101297569"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2aa24f72b5ffc26441a7ca8e4730355c2c38c8dd",
+          "message": "Merge pull request #141 from Nearu-Project-SUSL/User-Profile\n\nAdd Google authentication and user management features",
+          "timestamp": "2026-05-17T11:31:55+05:30",
+          "tree_id": "6e644926c1d33ac7e16ea570a6c88459c7f4a3f7",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/2aa24f72b5ffc26441a7ca8e4730355c2c38c8dd"
+        },
+        "date": 1778997782834,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7980.3544921875,
+            "unit": "ns",
+            "range": "± 129.70700925927147"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165767206.5,
+            "unit": "ns",
+            "range": "± 126229.55608260888"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 11688.495910644531,
+            "unit": "ns",
+            "range": "± 31.732764975776057"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1236.306475321452,
+            "unit": "ns",
+            "range": "± 18.33359929716698"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 391.00316945711774,
+            "unit": "ns",
+            "range": "± 2.0034632866263813"
           }
         ]
       }
