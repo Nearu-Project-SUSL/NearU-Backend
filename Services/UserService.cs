@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using NearU_Backend_Revised.DTOs.Auth;
+using NearU_Backend_Revised.DTOs.User;
 using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Models;
+using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Configuration;
 using BCrypt.Net;
 
@@ -15,17 +17,20 @@ namespace NearU_Backend_Revised.Services
         private readonly ITokenService _tokenService;
         private readonly IRefreshTokenRepository _refreshTokenRepo;
         private readonly JwtSettings _jwtSettings;
+        private readonly IImageService _imageService;
 
         public UserService(
             UserRepository userrepo, 
             ITokenService tokenService,
             IRefreshTokenRepository refreshTokenRepo,
-            IOptions<JwtSettings> jwtSettings)
+            IOptions<JwtSettings> jwtSettings,
+            IImageService imageService)
         {
             _userRepo = userrepo;
             _tokenService = tokenService;
             _refreshTokenRepo = refreshTokenRepo;
             _jwtSettings = jwtSettings.Value;
+            _imageService = imageService;
         }
 
         public async Task<User> Register(RegisterRequest request)
@@ -176,6 +181,41 @@ namespace NearU_Backend_Revised.Services
         public async Task<User?> GetUserById(string id)
         {
             return await _userRepo.GetByIdAsync(id);
+        }
+
+        public async Task<User> UpdateProfileAsync(string userId, UpdateProfileRequest request)
+        {
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null) throw new Exception("User not found");
+
+            if (!string.IsNullOrEmpty(request.Username)) user.Username = request.Username;
+            if (!string.IsNullOrEmpty(request.MobileNumber)) user.MobileNumber = request.MobileNumber;
+            if (!string.IsNullOrEmpty(request.Faculty)) user.Faculty = request.Faculty;
+            if (!string.IsNullOrEmpty(request.Year)) user.Year = request.Year;
+            if (!string.IsNullOrEmpty(request.Address)) user.Address = request.Address;
+            if (!string.IsNullOrEmpty(request.City)) user.City = request.City;
+            if (!string.IsNullOrEmpty(request.DateOfBirth)) user.DateOfBirth = request.DateOfBirth;
+
+            await _userRepo.UpdateUserAsync(user);
+            return user;
+        }
+
+        public async Task<User> UpdateProfilePictureAsync(string userId, IFormFile file)
+        {
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null) throw new Exception("User not found");
+
+            if (file == null || file.Length == 0)
+                throw new Exception("File is empty");
+
+            // Upload image using ImageService
+            var folder = "user_profiles";
+            var imageUrl = await _imageService.UploadImageAsync(file, folder);
+
+            user.ProfilePictureUrl = imageUrl;
+            await _userRepo.UpdateUserAsync(user);
+
+            return user;
         }
 
         /// <summary>
