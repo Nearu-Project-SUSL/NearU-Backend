@@ -253,7 +253,16 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate();
+        
+        try
+        {
+            context.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(ex, "Database migration failed (possibly due to missing PostGIS extension locally). Continuing with fallback table creation...");
+        }
 
         // Ensure GiftShop tables exist in case EF Migrations History is out of sync
         context.Database.ExecuteSqlRaw(@"
@@ -290,7 +299,7 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogCritical(ex, "FATAL: Database migration failed!");
+        logger.LogCritical(ex, "FATAL: Database initialization fallback failed!");
         throw;
     }
 }
