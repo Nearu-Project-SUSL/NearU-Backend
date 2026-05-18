@@ -28,7 +28,7 @@ namespace NearU_Backend_Revised.Services
       });
     }
 
-    public async Task<Testimonial> CreateAsync(string userId, string message, int rating)
+    public async Task<Testimonial?> CreateAsync(string userId, string message, int rating)
     {
       var testimonial = new Testimonial
       {

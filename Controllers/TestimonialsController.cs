@@ -34,6 +34,10 @@ namespace NearU_Backend_Revised.Controllers
         return Unauthorized(new {Message = "Please log in to share your experience!"});
 
       var testimonial = await _service.CreateAsync(userId, dto.Message, dto.Rating);
+
+      if (testimonial == null)
+        return StatusCode(500, new { message = "Failed to save testimonial" });
+
       return Ok(new { Message = "Thank you for sharing your experience!", id = testimonial.Id });
     }
 
@@ -48,7 +52,7 @@ namespace NearU_Backend_Revised.Controllers
         var result = await _service.DeleteAsync(id, userId);
         return result? Ok(new {message = "Deleted successfully"}) : NotFound();
       }
-      catch(UnauthorizedAccessException)
+      catch(UnauthorizedAccessException )
       {
         return Forbid();
       }
