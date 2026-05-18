@@ -43,7 +43,7 @@ namespace NearU_Backend_Revised.Middleware
 
                 var jwt = (JwtSecurityToken)validatedToken;
 
-                var userId = jwt.Claims.First(c => c.Type == "id").Value;
+                var userId = jwt.Claims.First(c => c.Type == "userId").Value;
                 context.Items["UserId"] = userId;
             }
             catch { /* invalid token — skip */ }
