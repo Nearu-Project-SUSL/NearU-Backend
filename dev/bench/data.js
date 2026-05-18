@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778997783164,
+  "lastUpdate": 1779075900217,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -904,6 +904,60 @@ window.BENCHMARK_DATA = {
             "value": 391.00316945711774,
             "unit": "ns",
             "range": "± 2.0034632866263813"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a9eb59616b0ef57f8b92a785d1eadb9a95b20c0",
+          "message": "Merge pull request #144 from Nearu-Project-SUSL/User-Profile\n\nEnhance job and shop management with SendGrid email notifications",
+          "timestamp": "2026-05-18T09:13:42+05:30",
+          "tree_id": "f42f18500a2f98699879ed17ccd92c1f97f3b82b",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/0a9eb59616b0ef57f8b92a785d1eadb9a95b20c0"
+        },
+        "date": 1779075899881,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7153.297098795573,
+            "unit": "ns",
+            "range": "± 139.6518240590123"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146581447.91666666,
+            "unit": "ns",
+            "range": "± 347074.0161161893"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 13866.367073059082,
+            "unit": "ns",
+            "range": "± 92.14244649297724"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1203.1733748118083,
+            "unit": "ns",
+            "range": "± 2.897317256149224"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 451.65256547927856,
+            "unit": "ns",
+            "range": "± 0.9546580973807108"
           }
         ]
       }
