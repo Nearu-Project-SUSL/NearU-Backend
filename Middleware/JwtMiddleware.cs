@@ -30,19 +30,21 @@ namespace NearU_Backend_Revised.Middleware
         {
             try
             {
-                var key = Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!);
+                var jwtSettings = _config.GetSection("JwtSettings");
+                var key = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
                 var handler = new JwtSecurityTokenHandler();
                 handler.ValidateToken(token, new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtSettings["Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = jwtSettings["Audience"],
                     ClockSkew = TimeSpan.Zero
                 }, out var validatedToken);
 
                 var jwt = (JwtSecurityToken)validatedToken;
-
                 var userId = jwt.Claims.First(c => c.Type == "userId").Value;
                 context.Items["UserId"] = userId;
             }
