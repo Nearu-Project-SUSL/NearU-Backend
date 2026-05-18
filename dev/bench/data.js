@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779075900217,
+  "lastUpdate": 1779126729174,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -958,6 +958,60 @@ window.BENCHMARK_DATA = {
             "value": 451.65256547927856,
             "unit": "ns",
             "range": "± 0.9546580973807108"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "pamalpahasara@gmail.com",
+            "name": "pamal pahasara",
+            "username": "pamal29"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d6082cd9c0fcc2e415397f2d3a30822b1192d2de",
+          "message": "Merge pull request #148 from Nearu-Project-SUSL/NU-31-testimonials\n\nNu 31 testimonials",
+          "timestamp": "2026-05-18T23:20:36+05:30",
+          "tree_id": "5bf179b8297737ae4d8dd6412ac8b259a9f2ec49",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/d6082cd9c0fcc2e415397f2d3a30822b1192d2de"
+        },
+        "date": 1779126728396,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7317.167470296224,
+            "unit": "ns",
+            "range": "± 160.11635727541605"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 147495186.33333334,
+            "unit": "ns",
+            "range": "± 1402359.3686833256"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14935.454854329428,
+            "unit": "ns",
+            "range": "± 32.90720449103727"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1322.7101389567058,
+            "unit": "ns",
+            "range": "± 2.8821051827784347"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 435.9987204869588,
+            "unit": "ns",
+            "range": "± 4.877509296015911"
           }
         ]
       }
