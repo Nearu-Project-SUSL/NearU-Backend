@@ -42,6 +42,8 @@ services:
       - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
       - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
       - Firebase__CredentialsPath=/app/firebase-adminsdk.json
+      - SendGrid__ApiKey=${SendGrid__ApiKey}
+      - SendGrid__FromEmail=${SendGrid__FromEmail}
     volumes:
       - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:

@@ -182,7 +182,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     });
 });
 
-// Register other repositories and services
+// Register repositories and services
+builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();

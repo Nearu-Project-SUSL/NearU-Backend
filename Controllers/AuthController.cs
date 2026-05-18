@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.DTOs.Auth;
 using NearU_Backend_Revised.Models;
@@ -53,6 +53,20 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
 
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin(GoogleLoginRequest request)
+        {
+            try
+            {
+                var authResponse = await _userService.GoogleLoginAsync(request);
+                return Ok(ApiResponse<object>.SuccessResponse("Google Login successful", authResponse));
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
@@ -89,6 +103,77 @@ namespace NearU_Backend_Revised.Controllers
                 };
 
                 return Ok(ApiResponse<object>.SuccessResponse("User retrieved successfully", data));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            try
+            {
+                await _userService.ForgotPassword(request);
+                return Ok(ApiResponse<object>.SuccessResponse("Password reset code sent to your email.", default!));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("verify-reset-code")]
+        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeRequest request)
+        {
+            try
+            {
+                var isValid = _userService.VerifyResetCode(request);
+                if (isValid)
+                    return Ok(ApiResponse<object>.SuccessResponse("Code verified successfully.", default!));
+                
+                return BadRequest(ApiResponse<object>.FailResponse("Invalid verification code."));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                var success = await _userService.ResetPassword(request);
+                if (success)
+                    return Ok(ApiResponse<object>.SuccessResponse("Password reset successfully.", default!));
+
+                return BadRequest(ApiResponse<object>.FailResponse("Failed to reset password."));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            try
+            {
+                // Retrieve user ID claim from authenticated token
+                var userId = User.FindFirst("userId")?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(ApiResponse<object>.FailResponse("User ID claim is missing."));
+
+                var success = await _userService.ChangePassword(userId, request);
+                if (success)
+                    return Ok(ApiResponse<object>.SuccessResponse("Password changed successfully.", default!));
+
+                return BadRequest(ApiResponse<object>.FailResponse("Failed to change password."));
             }
             catch (Exception ex)
             {
