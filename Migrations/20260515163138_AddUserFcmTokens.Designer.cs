@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NearU_Backend_Revised.Data;
 using NetTopologySuite.Geometries;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NearU_Backend_Revised.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260515163138_AddUserFcmTokens")]
+    partial class AddUserFcmTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -575,38 +578,6 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("RiderStatuses");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Testimonial", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Testimonials");
-                });
-
             modelBuilder.Entity("NearU_Backend_Revised.Models.TrackingLog", b =>
                 {
                     b.Property<string>("Id")
@@ -668,9 +639,6 @@ namespace NearU_Backend_Revised.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ProfilePictureUrl")
                         .HasColumnType("text");
 
                     b.Property<string>("Role")
@@ -800,17 +768,6 @@ namespace NearU_Backend_Revised.Migrations
                     b.HasOne("NearU_Backend_Revised.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("RiderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Testimonial", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

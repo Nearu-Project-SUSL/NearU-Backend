@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
-using NearU_Backend_Revised.BackgroundServices;
 using NearU_Backend_Revised.Hubs;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Data;
@@ -16,6 +15,7 @@ using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,6 +103,21 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromMinutes(5)
     };
 
+    // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
+    // JWT as ?access_token=... in the query string. This reads it transparently.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 
 });
 
@@ -132,18 +147,18 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
+//testimonial
+builder.Services.AddScoped<ITestimonialRepository, TestimonialRepository>();
+builder.Services.AddScoped<ITestimonialService, TestimonialService>();
+
+
 // Accommodation feature
 builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
 builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
-// Rides feature
-builder.Services.AddScoped<IRideRepository, RideRepository>();
-builder.Services.AddScoped<IRideService, RideService>();
-builder.Services.AddHostedService<GhostRiderWorker>();
 
-// Configure Database (PostgreSQL)
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
@@ -163,11 +178,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorCodesToAdd: null
         );
         npgsqlOptions.CommandTimeout(30);
-        npgsqlOptions.UseNetTopologySuite(); //tells EF to map Point type to PostGIS geography
+        npgsqlOptions.UseNetTopologySuite(); // map Point type to PostGIS geography
     });
 });
 
-// Register other repositories and services
+// Register repositories and services
+builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
@@ -175,13 +192,14 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
-// Configure RideSettings
 builder.Services.Configure<RideSettings>(
     builder.Configuration.GetSection("RideSettings"));
 
+builder.Services.AddScoped<IRideRepository, RideRepository>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
 builder.Services.AddScoped<IRideNotificationService, RideNotificationService>();
+builder.Services.AddScoped<IFcmTokenService, FcmTokenService>();
 builder.Services.AddHostedService<GhostRiderCleanupWorker>();
 builder.Services.AddHostedService<RideLifecycleWorker>();
 
@@ -272,7 +290,8 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        logger.LogCritical(ex, "FATAL: Database migration failed!");
+        throw;
     }
 }
 
@@ -293,6 +312,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 });
 
 app.UseRouting();
+
+app.UseMiddleware<JwtMiddleware>();
 
 app.UseCors("AllowFrontend");
 app.UseRateLimiter();

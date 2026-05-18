@@ -21,18 +21,47 @@ public class RideService : IRideService
     private readonly IRideStateMachine _stateMachine;
     private readonly IRideNotificationService _rideNotificationService;
     private readonly GeometryFactory _geometryFactory;
+    private readonly ILogger<RideService> _logger;
 
     public RideService(
         ApplicationDbContext dbContext,
         IOptions<RideSettings> rideSettings,
         IRideStateMachine stateMachine,
-        IRideNotificationService rideNotificationService)
+        IRideNotificationService rideNotificationService,
+        ILogger<RideService> logger)
     {
         _dbContext = dbContext;
         _rideSettings = rideSettings.Value;
         _stateMachine = stateMachine;
         _rideNotificationService = rideNotificationService;
+        _logger = logger;
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+    }
+
+    /// <summary>
+    /// Returns the active (non-terminal) ride for the given user — works for both students and riders.
+    /// Returns null if no active ride exists. Used by mobile clients on app relaunch to rehydrate state.
+    /// </summary>
+    public async Task<RideSummaryDto?> GetActiveRideAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        // Terminal statuses — anything else is "active"
+        var terminalStatuses = new[]
+        {
+            RideRequestStatus.Completed,
+            RideRequestStatus.Cancelled,
+            RideRequestStatus.Interrupted,
+            RideRequestStatus.Expired,
+            RideRequestStatus.OTPLocked
+        };
+
+        var ride = await _dbContext.RideRequests
+            .Where(r =>
+                (r.StudentId == userId || r.RiderId == userId) &&
+                !terminalStatuses.Contains(r.Status))
+            .OrderByDescending(r => r.UpdatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return ride is null ? null : MapSummary(ride);
     }
 
     public async Task<RideSummaryDto> CreateRequestAsync(string studentId, CreateRideRequestDto request, CancellationToken cancellationToken = default)
@@ -85,7 +114,31 @@ public class RideService : IRideService
         _dbContext.RideRequests.Add(ride);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Notify online riders via SignalR (app is open)
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        // Push to riders whose app is backgrounded/closed — fire-and-forget so it never delays the response
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var nearbyRiderIds = await _dbContext.RiderStatuses
+                    .Where(rs =>
+                        rs.IsOnline &&
+                        rs.ApprovalStatus == RiderApprovalStatus.Approved &&
+                        rs.RiderId != studentId)
+                    .Select(rs => rs.RiderId)
+                    .ToListAsync(CancellationToken.None);
+
+                if (nearbyRiderIds.Any())
+                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, nearbyRiderIds, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Background FCM push failed for ride {RideId}", ride.Id);
+            }
+        }, CancellationToken.None);
+
         return MapSummary(ride);
     }
 
@@ -141,9 +194,9 @@ public class RideService : IRideService
     public async Task<RideSummaryDto> VerifyAsync(string riderId, string rideId, string otp, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
-        if (ride.Status != RideRequestStatus.InProgress && ride.Status != RideRequestStatus.Arrived)
+        if (ride.Status != RideRequestStatus.Arrived && ride.Status != RideRequestStatus.Accepted)
         {
-            throw new InvalidOperationException("OTP can only be verified for rides that are in progress.");
+            throw new InvalidOperationException("OTP can only be verified before the ride starts.");
         }
 
         if (ride.OtpExpiresAt is null || ride.OtpExpiresAt <= DateTime.UtcNow)
@@ -167,28 +220,14 @@ public class RideService : IRideService
             throw new InvalidOperationException("Invalid OTP.");
         }
 
-        _stateMachine.EnsureTransition(ride.Status, RideRequestStatus.Completed);
-        ride.Status = RideRequestStatus.Completed;
-        ride.CompletedAt = DateTime.UtcNow;
+        ride.Status = RideRequestStatus.InProgress;
+        ride.InProgressAt = DateTime.UtcNow;
+        ride.OTPAttempts = 0;
         ride.UpdatedAt = DateTime.UtcNow;
-
-        if (!await _dbContext.RideHistories.AnyAsync(h => h.RideId == ride.Id, cancellationToken))
-        {
-            _dbContext.RideHistories.Add(new RideHistory
-            {
-                RideId = ride.Id,
-                StudentId = ride.StudentId,
-                RiderId = ride.RiderId,
-                ServiceType = ride.ServiceType,
-                FinalFare = ride.EstimatedFare,
-                CalculatedDistance = ride.CalculatedDistance,
-                CreatedAt = ride.CreatedAt,
-                CompletedAt = ride.CompletedAt ?? DateTime.UtcNow
-            });
-        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
         return MapSummary(ride);
     }
 
@@ -354,6 +393,143 @@ public class RideService : IRideService
         return pendingRides.Select(MapSummary);
     }
 
+    /// <summary>
+    /// Pure fare calculation — does not create any database record.
+    /// Used by the client to show an estimate before the student confirms.
+    /// </summary>
+    public Task<FareEstimateResponseDto> EstimateFareAsync(
+        double pickupLat, double pickupLng,
+        double dropoffLat, double dropoffLng,
+        CancellationToken cancellationToken = default)
+    {
+        var distanceKm = CalculateDistanceKm(pickupLat, pickupLng, dropoffLat, dropoffLng);
+        var estimatedFare = _rideSettings.BaseFare + ((decimal)distanceKm * _rideSettings.RatePerKm);
+
+        return Task.FromResult(new FareEstimateResponseDto
+        {
+            DistanceKm = decimal.Round((decimal)distanceKm, 3, MidpointRounding.AwayFromZero),
+            EstimatedFare = decimal.Round(estimatedFare, 2, MidpointRounding.AwayFromZero),
+            BaseFare = _rideSettings.BaseFare,
+            RatePerKm = _rideSettings.RatePerKm
+        });
+    }
+
+    /// <summary>
+    /// Returns paginated ride history for the authenticated user (works for both students and riders).
+    /// </summary>
+    public async Task<IEnumerable<RideHistoryDto>> GetHistoryAsync(string userId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 50);
+        page = Math.Max(1, page);
+
+        var history = await _dbContext.RideHistories
+            .Where(h => h.StudentId == userId || h.RiderId == userId)
+            .OrderByDescending(h => h.CompletedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return history.Select(h => new RideHistoryDto
+        {
+            HistoryId = h.Id,
+            RideId = h.RideId,
+            StudentId = h.StudentId,
+            RiderId = h.RiderId,
+            ServiceType = h.ServiceType,
+            FinalFare = h.FinalFare,
+            DistanceKm = h.CalculatedDistance,
+            CompletedAt = h.CompletedAt,
+            RiderRating = h.RiderRating,
+            StudentRating = h.StudentRating
+        });
+    }
+
+    /// <summary>
+    /// Allows either party to submit a rating (1–5) for a completed ride.
+    /// A student rates the rider; a rider rates the student.
+    /// </summary>
+    public async Task RateRideAsync(string userId, string rideId, int rating, CancellationToken cancellationToken = default)
+    {
+        if (rating is < 1 or > 5)
+            throw new ArgumentOutOfRangeException(nameof(rating), "Rating must be between 1 and 5.");
+
+        var history = await _dbContext.RideHistories.FirstOrDefaultAsync(h => h.RideId == rideId, cancellationToken)
+            ?? throw new InvalidOperationException("Ride history record not found. Only completed rides can be rated.");
+
+        if (history.StudentId == userId)
+        {
+            if (history.RiderRating.HasValue)
+                throw new InvalidOperationException("You have already rated this ride.");
+            history.RiderRating = rating;
+        }
+        else if (history.RiderId == userId)
+        {
+            if (history.StudentRating.HasValue)
+                throw new InvalidOperationException("You have already rated this ride.");
+            history.StudentRating = rating;
+        }
+        else
+        {
+            throw new UnauthorizedAccessException("You were not a participant in this ride.");
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<RideSummaryDto> RiderCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
+    {
+        var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
+
+        if(ride.Status != RideRequestStatus.InProgress)
+            throw new InvalidOperationException("Ride must be in progress to mark as complete.");
+
+        ride.Status = RideRequestStatus.CompletedByRider;
+        ride.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Notify about the state change to student (ask if the ride is complete)
+        await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        return MapSummary(ride);
+    }
+
+    public async Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
+    {
+        var ride = await _dbContext.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+
+        if (ride is null || ride.StudentId != studentId)
+            return (false, "Ride not found or you are not the student for this ride.");
+        if (ride.Status != RideRequestStatus.CompletedByRider)
+            return (false, "Ride has not been marked complete by the rider yet.");
+
+        ride.Status = RideRequestStatus.Completed;
+        ride.CompletedAt = DateTime.UtcNow;
+        ride.UpdatedAt = DateTime.UtcNow;
+
+        // Create history record if it doesn't exist yet (idempotent)
+        if (!await _dbContext.RideHistories.AnyAsync(h => h.RideId == rideId, cancellationToken))
+        {
+            _dbContext.RideHistories.Add(new RideHistory
+            {
+                RideId             = ride.Id,
+                StudentId          = ride.StudentId,
+                RiderId            = ride.RiderId,
+                ServiceType        = ride.ServiceType,
+                FinalFare          = ride.EstimatedFare,
+                CalculatedDistance = ride.CalculatedDistance,
+                CreatedAt          = ride.CreatedAt,
+                CompletedAt        = ride.CompletedAt ?? DateTime.UtcNow
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        return (true, null);
+    }
+
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
@@ -372,10 +548,16 @@ public class RideService : IRideService
         {
             RideId = ride.Id,
             Status = ride.Status,
+            ServiceType = ride.ServiceType,
             StudentId = ride.StudentId,
             RiderId = ride.RiderId,
             EstimatedFare = ride.EstimatedFare,
             DistanceKm = ride.CalculatedDistance,
+            // PostGIS uses (X=Longitude, Y=Latitude) convention
+            PickupLatitude = ride.PickupLocation?.Y ?? 0,
+            PickupLongitude = ride.PickupLocation?.X ?? 0,
+            DropoffLatitude = ride.DropoffLocation?.Y ?? 0,
+            DropoffLongitude = ride.DropoffLocation?.X ?? 0,
             CreatedAt = ride.CreatedAt,
             OtpExpiresAt = ride.OtpExpiresAt
         };

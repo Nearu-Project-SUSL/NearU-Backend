@@ -6,6 +6,7 @@ namespace NearU_Backend_Revised.Enums
         Accepted,
         Arrived,
         InProgress,
+        CompletedByRider,
         Completed,
         Cancelled,
         Interrupted,
