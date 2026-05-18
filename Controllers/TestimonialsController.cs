@@ -48,7 +48,7 @@ namespace NearU_Backend_Revised.Controllers
         var result = await _service.DeleteAsync(id, userId);
         return result? Ok(new {message = "Deleted successfully"}) : NotFound();
       }
-      catch(UnauthorizedAccessException ex)
+      catch(UnauthorizedAccessException)
       {
         return Forbid();
       }
