@@ -30,7 +30,8 @@ namespace NearU_Backend_Revised.Middleware
         {
             try
             {
-                var key = Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!);
+                var jwtSettings = _config.GetSection("JwtSettings");
+                var key = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
                 var handler = new JwtSecurityTokenHandler();
                 handler.ValidateToken(token, new TokenValidationParameters
                 {
@@ -42,8 +43,7 @@ namespace NearU_Backend_Revised.Middleware
                 }, out var validatedToken);
 
                 var jwt = (JwtSecurityToken)validatedToken;
-
-                var userId = jwt.Claims.First(c => c.Type == "id").Value;
+                var userId = jwt.Claims.First(c => c.Type == "userId").Value;
                 context.Items["UserId"] = userId;
             }
             catch { /* invalid token — skip */ }
