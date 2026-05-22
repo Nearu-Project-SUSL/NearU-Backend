@@ -204,6 +204,7 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<AdminSeederService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
@@ -310,6 +311,10 @@ using (var scope = app.Services.CreateScope())
 
             CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
         ");
+
+        // Seed the initial Admin account from configuration
+        var seeder = services.GetRequiredService<AdminSeederService>();
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
