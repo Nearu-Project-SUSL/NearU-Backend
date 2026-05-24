@@ -25,6 +25,7 @@ public class RideController : ControllerBase
 
     /// <summary>POST /api/rides/device-token — call after login to enable push notifications.</summary>
     [HttpPost("rides/device-token")]
+    [Authorize] // Available to all authenticated roles
     public async Task<IActionResult> RegisterDeviceToken([FromBody] FcmTokenRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -41,6 +42,7 @@ public class RideController : ControllerBase
 
     /// <summary>DELETE /api/rides/device-token — call on logout to remove push notifications.</summary>
     [HttpDelete("rides/device-token")]
+    [Authorize] // Available to all authenticated roles
     public async Task<IActionResult> RemoveDeviceToken([FromBody] FcmTokenRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -59,6 +61,7 @@ public class RideController : ControllerBase
 
     /// <summary>GET /api/rides/estimate — no ride is created, pure fare calculation.</summary>
     [HttpGet("rides/estimate")]
+    [Authorize] // Available to all authenticated roles
     public async Task<IActionResult> GetEstimate(
         [FromQuery] double pickupLat, [FromQuery] double pickupLng,
         [FromQuery] double dropoffLat, [FromQuery] double dropoffLng,
@@ -79,6 +82,7 @@ public class RideController : ControllerBase
 
     /// <summary>GET /api/rides/history — paginated history for the logged-in user (student or rider).</summary>
     [HttpGet("rides/history")]
+    [Authorize] // Available to all authenticated roles
     public async Task<IActionResult> GetHistory(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -98,6 +102,7 @@ public class RideController : ControllerBase
 
     /// <summary>POST /api/rides/history/{rideId}/rate — rate a completed ride (1–5 stars).</summary>
     [HttpPost("rides/history/{rideId}/rate")]
+    [Authorize(Policy = "RequireStudent")] // Only students can rate rides
     public async Task<IActionResult> RateRide(string rideId, [FromBody] RateRideRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -120,6 +125,7 @@ public class RideController : ControllerBase
 
     /// <summary>GET /api/rides/active — returns current in-progress ride or 204 if none.</summary>
     [HttpGet("rides/active")]
+    [Authorize] // Available to all authenticated roles
     public async Task<IActionResult> GetActiveRide(CancellationToken cancellationToken)
     {
         try
@@ -139,6 +145,7 @@ public class RideController : ControllerBase
     // ─── Ride Requests ───────────────────────────────────────────────────────────
 
     [HttpPost("requests")]
+    [Authorize(Policy = "RequireStudent")] // Only students can request rides
     public async Task<IActionResult> CreateRequest([FromBody] CreateRideRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -154,6 +161,7 @@ public class RideController : ControllerBase
     }
 
     [HttpGet("requests/nearby")]
+    [Authorize(Policy = "RequireRider")] // Only riders can see nearby requests
     public async Task<IActionResult> GetNearbyRequests([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] double radiusMeters = 5000, CancellationToken cancellationToken = default)
     {
         try
@@ -173,6 +181,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("accept")]
+    [Authorize(Policy = "RequireRider")] // Only riders can accept rides
     public async Task<IActionResult> Accept([FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -192,6 +201,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("arrive")]
+    [Authorize(Policy = "RequireRider")] // Only riders can mark arrival
     public async Task<IActionResult> Arrive([FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -211,6 +221,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("verify")]
+    [Authorize(Policy = "RequireRider")] // Only riders can verify OTP to start a ride
     public async Task<IActionResult> Verify([FromBody] VerifyOtpRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -230,6 +241,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("rider-complete")]
+    [Authorize(Policy = "RequireRider")] // Only riders can mark their side complete
     public async Task<IActionResult> RiderComplete(
         [FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
@@ -245,6 +257,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("student-confirm")]
+    [Authorize(Policy = "RequireStudent")] // Only students can confirm ride completion
     public async Task<IActionResult> StudentConfirm(
         [FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
@@ -264,6 +277,7 @@ public class RideController : ControllerBase
 
 
     [HttpPost("otp/refresh")]
+    [Authorize(Policy = "RequireStudent")] // Only students can refresh their OTP
     public async Task<IActionResult> RefreshOtp([FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -283,6 +297,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("cancel")]
+    [Authorize(Policy = "RequireStudent")] // Only students can cancel their request
     public async Task<IActionResult> Cancel([FromBody] RideIdRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -302,6 +317,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPut("rider/status")]
+    [Authorize(Policy = "RequireRider")] // Only riders can toggle their availability
     public async Task<IActionResult> SetRiderStatus([FromBody] RiderStatusUpdateRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -317,6 +333,7 @@ public class RideController : ControllerBase
     }
 
     [HttpPost("location/heartbeat")]
+    [Authorize(Policy = "RequireRider")] // Only riders submit location heartbeats
     public async Task<IActionResult> LocationHeartbeat([FromBody] LocationHeartbeatRequestDto request, CancellationToken cancellationToken)
     {
         try
@@ -336,6 +353,7 @@ public class RideController : ControllerBase
     }
 
     [HttpGet("location/{rideId}")]
+    [Authorize(Policy = "RequireStudent")] // Only students poll live location of their rider
     public async Task<IActionResult> GetLiveLocation(string rideId, CancellationToken cancellationToken)
     {
         try

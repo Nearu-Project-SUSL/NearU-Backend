@@ -43,6 +43,14 @@ namespace NearU_Backend_Revised.Services
             var existingUser = await _userRepo.GetUserByEmail(request.Email);
             if (existingUser != null) throw new Exception("User already exists");
 
+            // Service-layer guard: Admin accounts cannot be created via self-registration.
+            // The DTO regex already blocks this, but we enforce it here too for defense-in-depth.
+            if (string.Equals(request.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Admin accounts cannot be created via registration. Contact your system administrator.");
+
+            if (!UserRoles.IsValidRole(request.Role))
+                throw new Exception($"Invalid role '{request.Role}'. Allowed roles: Student, Rider, Business.");
+
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
             var user = new User
             {
@@ -57,7 +65,7 @@ namespace NearU_Backend_Revised.Services
                 City = request.City,
                 DateOfBirth = request.DateOfBirth,
                 PasswordHash = hashedPassword,
-                Role = "User",
+                Role = request.Role,
                 CreatedDate = DateTime.UtcNow.ToString("o"),
                 IsActive = 1
             };

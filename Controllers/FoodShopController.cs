@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.FoodShop;
 using NearU_Backend_Revised.Services.Interfaces;
@@ -50,7 +51,8 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost]
-        [Consumes("multipart/form-data")] //accept form data for image upload not json
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> Create([FromForm] CreateFoodShop request)
         {
             var shop = await _service.CreateShopAsync(request);
@@ -62,6 +64,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(string id, [FromForm] UpdateFoodShop request)
         {
@@ -72,6 +75,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Delete(string id)
         {
             var deleted = await _service.DeleteShopAsync(id);

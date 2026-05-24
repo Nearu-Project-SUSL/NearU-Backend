@@ -125,15 +125,30 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAuthenticatedUser", policy =>
-    {
-        policy.RequireAuthenticatedUser();
-    });
+        policy.RequireAuthenticatedUser());
 
     options.AddPolicy("RequireUserId", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.RequireClaim("userId");
     });
+
+    // ── Role-based policies ──────────────────────────────────────────────────
+    options.AddPolicy("RequireStudent", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Student));
+
+    options.AddPolicy("RequireRider", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Rider));
+
+    options.AddPolicy("RequireBusiness", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business));
+
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Admin));
+
+    // Business owners and admins can both manage listings
+    options.AddPolicy("RequireBusinessOrAdmin", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business, UserRoles.Admin));
 });
 
 builder.Services.Configure<ImageKitSettings>(
@@ -189,6 +204,7 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<AdminSeederService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
@@ -295,6 +311,10 @@ using (var scope = app.Services.CreateScope())
 
             CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
         ");
+
+        // Seed the initial Admin account from configuration
+        var seeder = services.GetRequiredService<AdminSeederService>();
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {

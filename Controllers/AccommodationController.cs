@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.Accommodation;
 using NearU_Backend_Revised.Services.Interfaces;
@@ -33,6 +34,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")] //accept form data for image upload not json
         public async Task<IActionResult> Create([FromForm] CreateAccommodation request)
         {
@@ -52,6 +54,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(string id, [FromForm] UpdateAccommodation request)
         {
@@ -69,6 +72,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Delete(string id)
         {
             var deleted = await _service.DeleteAccommodationAsync(id);
