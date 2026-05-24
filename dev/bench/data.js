@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779602554187,
+  "lastUpdate": 1779609221751,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1064,6 +1064,60 @@ window.BENCHMARK_DATA = {
             "value": 195.70297678311667,
             "unit": "ns",
             "range": "± 0.6500197610771264"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e5a53d7356939fca2bef7c843b41f23e7720ffb5",
+          "message": "Merge pull request #152 from Nearu-Project-SUSL/feat/dozzle-logs\n\nImplement role-based authentication, ownership enforcement, and user management",
+          "timestamp": "2026-05-24T13:22:19+05:30",
+          "tree_id": "72dbcc35e3e1b8778b78b003f17e1fbd63572ac7",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/e5a53d7356939fca2bef7c843b41f23e7720ffb5"
+        },
+        "date": 1779609220532,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7307.75271097819,
+            "unit": "ns",
+            "range": "± 13.972355844571107"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 147225746.75,
+            "unit": "ns",
+            "range": "± 703901.3474212402"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15035.791468302408,
+            "unit": "ns",
+            "range": "± 10.286640763918479"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1294.6813685099285,
+            "unit": "ns",
+            "range": "± 2.152216916550972"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 432.46955585479736,
+            "unit": "ns",
+            "range": "± 3.119910195686072"
           }
         ]
       }
