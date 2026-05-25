@@ -19,6 +19,17 @@ public class RidesHub : Hub
         _logger = logger;
     }
 
+    public override async Task OnConnectedAsync()
+    {
+        var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
+        if (role == "Admin")
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
+            _logger.LogInformation("Admin connection established: {ConnectionId} for user {UserId}", Context.ConnectionId, Context.UserIdentifier);
+        }
+        await base.OnConnectedAsync();
+    }
+
     /// <summary>
     /// Subscribe to updates for a specific ride.
     /// Both the student and the matched rider should call this after a ride is accepted.

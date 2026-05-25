@@ -8,6 +8,10 @@ using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Configuration;
 using BCrypt.Net;
+using NearU_Backend_Revised.Data;
+using NearU_Backend_Revised.Enums;
+using Microsoft.AspNetCore.SignalR;
+using NearU_Backend_Revised.Hubs;
 
 namespace NearU_Backend_Revised.Services
 {
@@ -19,6 +23,8 @@ namespace NearU_Backend_Revised.Services
         private readonly JwtSettings _jwtSettings;
         private readonly IImageService _imageService;
         private readonly IEmailService _emailService;
+        private readonly ApplicationDbContext _dbContext;
+        private readonly IHubContext<RidesHub> _hubContext;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
 
@@ -28,7 +34,9 @@ namespace NearU_Backend_Revised.Services
             IRefreshTokenRepository refreshTokenRepo,
             IOptions<JwtSettings> jwtSettings,
             IImageService imageService,
-            IEmailService emailService)
+            IEmailService emailService,
+            ApplicationDbContext dbContext,
+            IHubContext<RidesHub> hubContext)
         {
             _userRepo = userrepo;
             _tokenService = tokenService;
@@ -36,6 +44,8 @@ namespace NearU_Backend_Revised.Services
             _jwtSettings = jwtSettings.Value;
             _imageService = imageService;
             _emailService = emailService;
+            _dbContext = dbContext;
+            _hubContext = hubContext;
         }
 
         public async Task<User> Register(RegisterRequest request)
@@ -71,6 +81,91 @@ namespace NearU_Backend_Revised.Services
             };
 
             await _userRepo.AddUser(user);
+
+            // FIX: Initialize RiderStatus immediately upon registration
+            if (user.Role == "Rider")
+            {
+                var riderStatus = new RiderStatus
+                {
+                    RiderId = user.Id,
+                    IsOnline = false,
+                    ApprovalStatus = RiderApprovalStatus.Pending,
+                    LastSeen = DateTime.UtcNow
+                };
+                _dbContext.RiderStatuses.Add(riderStatus);
+                await _dbContext.SaveChangesAsync();
+
+                // Method A: Email Notification to Admins via SendGrid
+                try
+                {
+                    var adminEmail = "admin@nearusab.me";
+                    var subject = "New Rider Application - Review Required 🛵";
+                    var plainText = $"Rider {user.Username} ({user.Email}) has registered and is pending approval.";
+                    var htmlContent = $@"
+<div style=""font-family: 'Inter', sans-serif; background-color: #0d0e12; color: #ffffff; padding: 40px 20px; text-align: center; border-radius: 8px; max-width: 600px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1);"">
+    <div style=""margin-bottom: 20px;"">
+        <h1 style=""color: #2E9EBF; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;"">NearU</h1>
+        <p style=""color: #9ca3af; font-size: 14px; margin-top: 5px;"">Rider Registration Center</p>
+    </div>
+    <div style=""background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 30px; margin-bottom: 20px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); text-align: left;"">
+        <h2 style=""color: #f3f4f6; margin-top: 0; font-size: 20px; font-weight: 600; text-align: center;"">New Rider Application Received</h2>
+        <p style=""color: #9ca3af; font-size: 16px; line-height: 1.6; margin-bottom: 25px;"">A new rider has successfully registered on NearU and is currently pending review. Please log in to the admin console to approve or reject this applicant.</p>
+        
+        <table style=""width: 100%; color: #9ca3af; border-collapse: collapse; margin-bottom: 25px;"">
+            <tr>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Rider Name:</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.Username)}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Email:</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.Email)}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Phone:</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.MobileNumber ?? "N/A")}</td>
+            </tr>
+            <tr>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Address:</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.Address ?? "N/A")}</td>
+            </tr>
+        </table>
+        
+        <div style=""text-align: center;"">
+            <a href=""https://admin.nearusab.me/riders"" style=""background: linear-gradient(135deg, #2E9EBF 0%, #1a7a9a 100%); padding: 15px 30px; border-radius: 8px; display: inline-block; font-size: 16px; font-weight: 700; color: #ffffff; text-decoration: none; box-shadow: 0 4px 15px rgba(46, 158, 191, 0.4);"">Review & Approve Rider</a>
+        </div>
+    </div>
+    <div style=""color: #4b5563; font-size: 12px; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;"">
+        &copy; 2026 NearU Inc. All rights reserved.
+    </div>
+</div>";
+
+                    await _emailService.SendEmailAsync(adminEmail, subject, plainText, htmlContent);
+                }
+                catch (Exception ex)
+                {
+                    // Catch exception to make sure failing email doesn't crash rider registration.
+                    Console.WriteLine($"[Email Service Error] Failed to send admin email: {ex.Message}");
+                }
+
+                // Method B: SignalR Broadcast to Admin Console
+                try
+                {
+                    await _hubContext.Clients.Group("Admins").SendAsync("NewRiderApplication", new
+                    {
+                        riderId = user.Id,
+                        name = user.Username,
+                        email = user.Email,
+                        mobileNumber = user.MobileNumber,
+                        registeredAt = DateTime.UtcNow
+                    });
+                }
+                catch (Exception ex)
+                {
+                    // Catch exception to prevent SignalR disconnects from crashing registration.
+                    Console.WriteLine($"[SignalR Error] Failed to broadcast admin alert: {ex.Message}");
+                }
+            }
+
             return user;
         }
 
