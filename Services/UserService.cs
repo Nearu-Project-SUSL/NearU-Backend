@@ -114,19 +114,19 @@ namespace NearU_Backend_Revised.Services
         <table style=""width: 100%; color: #9ca3af; border-collapse: collapse; margin-bottom: 25px;"">
             <tr>
                 <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Rider Name:</td>
-                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{user.Username}</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.Username)}</td>
             </tr>
             <tr>
                 <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Email:</td>
-                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{user.Email}</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.Email)}</td>
             </tr>
             <tr>
                 <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Phone:</td>
-                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{user.MobileNumber ?? "N/A"}</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.MobileNumber ?? "N/A")}</td>
             </tr>
             <tr>
                 <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: bold;"">Address:</td>
-                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{user.Address ?? "N/A"}</td>
+                <td style=""padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ffffff;"">{System.Net.WebUtility.HtmlEncode(user.Address ?? "N/A")}</td>
             </tr>
         </table>
         
