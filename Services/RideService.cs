@@ -45,8 +45,8 @@ public class RideService : IRideService
         var pickup = CreatePoint(request.PickupLongitude, request.PickupLatitude);
         var dropoff = CreatePoint(request.DropoffLongitude, request.DropoffLatitude);
 
-        var pickupInside = await IsWithinFacultyRadiusAsync(pickup, cancellationToken);
-        var dropoffInside = await IsWithinFacultyRadiusAsync(dropoff, cancellationToken);
+        var pickupInside  = IsWithinFacultyRadius(pickup);
+        var dropoffInside = IsWithinFacultyRadius(dropoff);
         if (!pickupInside || !dropoffInside)
         {
             throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
@@ -518,33 +518,17 @@ public class RideService : IRideService
         return _geometryFactory.CreatePoint(new Coordinate(longitude, latitude));
     }
 
-    private async Task<bool> IsWithinFacultyRadiusAsync(Point point, CancellationToken cancellationToken)
+    private static bool IsWithinFacultyRadius(Point point)
     {
-        await using var connection = _dbContext.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT ST_DWithin(
-                ST_SetSRID(ST_MakePoint(@lng, @lat), 4326)::geography,
-                ST_SetSRID(ST_MakePoint(@centerLng, @centerLat), 4326)::geography,
-                @radiusMeters
-            );
-            """;
-
-        AddParameter(command, "lng", point.X);
-        AddParameter(command, "lat", point.Y);
-        AddParameter(command, "centerLng", RideConstants.FacultyCentroidLng);
-        AddParameter(command, "centerLat", RideConstants.FacultyCentroidLat);
-        AddParameter(command, "radiusMeters", RideConstants.AllowedRadiusMeters);
-
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return result is bool flag && flag;
+        const double R = 6371000;
+        var dLat = ToRadians(RideConstants.FacultyCentroidLat - point.Y);
+        var dLon = ToRadians(RideConstants.FacultyCentroidLng - point.X);
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+            + Math.Cos(ToRadians(point.Y)) * Math.Cos(ToRadians(RideConstants.FacultyCentroidLat))
+            * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c <= RideConstants.AllowedRadiusMeters;
     }
-
     private static void AddParameter(IDbCommand command, string name, object value)
     {
         var parameter = command.CreateParameter();
