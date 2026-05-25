@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779614458799,
+  "lastUpdate": 1779723382862,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1172,6 +1172,60 @@ window.BENCHMARK_DATA = {
             "value": 465.8149512608846,
             "unit": "ns",
             "range": "± 1.1460864189345827"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a7fb9703ffd1b573718749743500217b90918843",
+          "message": "Merge pull request #153 from Nearu-Project-SUSL/feat/dozzle-logs\n\nEnhance RidesHub with admin group connection and user notifications",
+          "timestamp": "2026-05-25T21:05:03+05:30",
+          "tree_id": "57283c58509dfd75d6b1e91ad22e4a8fce5156fc",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/a7fb9703ffd1b573718749743500217b90918843"
+        },
+        "date": 1779723382040,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7254.132232666016,
+            "unit": "ns",
+            "range": "± 42.91607688047584"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146713811.41666666,
+            "unit": "ns",
+            "range": "± 287266.47356127953"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15413.818318684896,
+            "unit": "ns",
+            "range": "± 261.4728738359846"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1279.387082417806,
+            "unit": "ns",
+            "range": "± 3.1005699252201446"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 443.6001814206441,
+            "unit": "ns",
+            "range": "± 2.679298457812073"
           }
         ]
       }
