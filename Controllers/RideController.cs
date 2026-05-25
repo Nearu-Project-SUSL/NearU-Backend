@@ -316,6 +316,32 @@ public class RideController : ControllerBase
         }
     }
 
+    [HttpGet("rider/status")]
+    [Authorize(Policy = "RequireRider")] // Only riders can fetch their availability & approval status
+    public async Task<IActionResult> GetRiderStatus(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var riderId = RequireUserId();
+            var status = await _rideService.GetRiderStatusAsync(riderId, cancellationToken);
+            if (status == null)
+            {
+                return NotFound(ApiResponse<object>.FailResponse("Rider status profile not found."));
+            }
+            return Ok(ApiResponse<object>.SuccessResponse("Rider status fetched.", new
+            {
+                riderId = status.RiderId,
+                isOnline = status.IsOnline,
+                approvalStatus = status.ApprovalStatus.ToString(),
+                riderTier = status.RiderTier.ToString()
+            }));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
     [HttpPut("rider/status")]
     [Authorize(Policy = "RequireRider")] // Only riders can toggle their availability
     public async Task<IActionResult> SetRiderStatus([FromBody] RiderStatusUpdateRequestDto request, CancellationToken cancellationToken)
