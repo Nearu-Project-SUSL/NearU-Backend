@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779723382862,
+  "lastUpdate": 1779735262236,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1226,6 +1226,60 @@ window.BENCHMARK_DATA = {
             "value": 443.6001814206441,
             "unit": "ns",
             "range": "± 2.679298457812073"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51f0d7a1ac428d5e3a8a33cf921952de198cd4e1",
+          "message": "Merge pull request #155 from Nearu-Project-SUSL/feat/dozzle-logs\n\nFix Rider connection issues with SignalR and FCM errors",
+          "timestamp": "2026-05-26T00:23:12+05:30",
+          "tree_id": "4cfcf619019d7d154cbd03d2b2e8da1f0337f34b",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/51f0d7a1ac428d5e3a8a33cf921952de198cd4e1"
+        },
+        "date": 1779735261418,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7241.75964864095,
+            "unit": "ns",
+            "range": "± 54.13175157644386"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165631689.58333334,
+            "unit": "ns",
+            "range": "± 132418.84780412054"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 11422.264841715494,
+            "unit": "ns",
+            "range": "± 34.769441148781915"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1321.6982434590657,
+            "unit": "ns",
+            "range": "± 8.455466228391412"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 401.8053118387858,
+            "unit": "ns",
+            "range": "± 0.5590853766959353"
           }
         ]
       }
