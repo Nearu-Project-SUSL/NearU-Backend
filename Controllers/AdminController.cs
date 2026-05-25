@@ -38,6 +38,27 @@ public class AdminController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        // ─── Self-Healing database check ───
+        // Automatically initialize RiderStatus for any User registered as "Rider" but missing a status entry
+        var missingRiders = await _dbContext.Users
+            .Where(u => u.Role == "Rider" && !_dbContext.RiderStatuses.Any(rs => rs.RiderId == u.Id))
+            .ToListAsync(cancellationToken);
+
+        if (missingRiders.Any())
+        {
+            foreach (var user in missingRiders)
+            {
+                _dbContext.RiderStatuses.Add(new RiderStatus
+                {
+                    RiderId = user.Id,
+                    IsOnline = false,
+                    ApprovalStatus = RiderApprovalStatus.Pending,
+                    LastSeen = DateTime.UtcNow
+                });
+            }
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         var query = _dbContext.RiderStatuses
             .Include(rs => rs.User)
             .AsQueryable();

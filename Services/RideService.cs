@@ -310,6 +310,28 @@ public class RideService : IRideService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<RiderStatus?> GetRiderStatusAsync(string riderId, CancellationToken cancellationToken = default)
+    {
+        var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        if (riderStatus == null)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == riderId && u.Role == "Rider", cancellationToken);
+            if (user != null)
+            {
+                riderStatus = new RiderStatus
+                {
+                    RiderId = riderId,
+                    IsOnline = false,
+                    ApprovalStatus = RiderApprovalStatus.Pending,
+                    LastSeen = DateTime.UtcNow
+                };
+                _dbContext.RiderStatuses.Add(riderStatus);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+        return riderStatus;
+    }
+
     public async Task SubmitHeartbeatAsync(string riderId, LocationHeartbeatRequestDto request, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, request.RideId, cancellationToken);
