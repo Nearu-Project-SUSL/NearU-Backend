@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779776537497,
+  "lastUpdate": 1779808384411,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1334,6 +1334,60 @@ window.BENCHMARK_DATA = {
             "value": 447.9119170506795,
             "unit": "ns",
             "range": "± 15.978209638718656"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ee70c1acdc2e91778173f2102eab77f0087f2fc5",
+          "message": "Merge pull request #157 from Nearu-Project-SUSL/feat/dozzle-logs\n\nImplement UserService for rider registration and notifications",
+          "timestamp": "2026-05-26T20:41:37+05:30",
+          "tree_id": "82ea50130c5d5fc1032898b0494620a4befbfbb8",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/ee70c1acdc2e91778173f2102eab77f0087f2fc5"
+        },
+        "date": 1779808382976,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7505.711441040039,
+            "unit": "ns",
+            "range": "± 33.26512231357101"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146621748.25,
+            "unit": "ns",
+            "range": "± 239799.34210827705"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15480.67795308431,
+            "unit": "ns",
+            "range": "± 86.16849994340235"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1250.3925151824951,
+            "unit": "ns",
+            "range": "± 10.265365386663921"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 442.6656211217244,
+            "unit": "ns",
+            "range": "± 8.235635712449175"
           }
         ]
       }
