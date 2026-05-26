@@ -99,9 +99,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
         ),
-        ClockSkew = TimeSpan.FromMinutes(5),
-        NameClaimType = "unique_name",
-        RoleClaimType = "role"
+        ClockSkew = TimeSpan.FromMinutes(5)
     };
 
     // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
