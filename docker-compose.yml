@@ -44,6 +44,7 @@ services:
       - Firebase__CredentialsPath=/app/firebase-adminsdk.json
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - AdminSeed__Email=${AdminSeed__Email}
     volumes:
       - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:

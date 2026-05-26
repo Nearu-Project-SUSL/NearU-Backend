@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using NearU_Backend_Revised.DTOs.Auth;
 using NearU_Backend_Revised.DTOs.User;
 using NearU_Backend_Revised.Repositories;
@@ -25,6 +26,7 @@ namespace NearU_Backend_Revised.Services
         private readonly IEmailService _emailService;
         private readonly ApplicationDbContext _dbContext;
         private readonly IHubContext<RidesHub> _hubContext;
+        private readonly IConfiguration _configuration;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
 
@@ -36,7 +38,8 @@ namespace NearU_Backend_Revised.Services
             IImageService imageService,
             IEmailService emailService,
             ApplicationDbContext dbContext,
-            IHubContext<RidesHub> hubContext)
+            IHubContext<RidesHub> hubContext,
+            IConfiguration configuration)
         {
             _userRepo = userrepo;
             _tokenService = tokenService;
@@ -46,6 +49,7 @@ namespace NearU_Backend_Revised.Services
             _emailService = emailService;
             _dbContext = dbContext;
             _hubContext = hubContext;
+            _configuration = configuration;
         }
 
         public async Task<User> Register(RegisterRequest request)
@@ -98,7 +102,7 @@ namespace NearU_Backend_Revised.Services
                 // Method A: Email Notification to Admins via SendGrid
                 try
                 {
-                    var adminEmail = "admin@nearusab.me";
+                    var adminEmail = _configuration["AdminSeed:Email"] ?? "admin@nearusab.me";
                     var subject = "New Rider Application - Review Required 🛵";
                     var plainText = $"Rider {user.Username} ({user.Email}) has registered and is pending approval.";
                     var htmlContent = $@"
