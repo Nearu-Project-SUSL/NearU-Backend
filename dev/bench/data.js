@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779735262236,
+  "lastUpdate": 1779776537497,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1280,6 +1280,60 @@ window.BENCHMARK_DATA = {
             "value": 401.8053118387858,
             "unit": "ns",
             "range": "± 0.5590853766959353"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "062592ff227b320d0e200d33614b1373838f7594",
+          "message": "Merge pull request #156 from Nearu-Project-SUSL/feat/dozzle-logs\n\nFix missing endpoints and VAPID error handling",
+          "timestamp": "2026-05-26T11:51:09+05:30",
+          "tree_id": "ca6c2a598724344d13068f31589c0a86709277ea",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/062592ff227b320d0e200d33614b1373838f7594"
+        },
+        "date": 1779776537179,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7437.595143636067,
+            "unit": "ns",
+            "range": "± 441.74808800004604"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146409175.25,
+            "unit": "ns",
+            "range": "± 59283.027463073275"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15289.297927856445,
+            "unit": "ns",
+            "range": "± 107.46316701012901"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1193.9246673583984,
+            "unit": "ns",
+            "range": "± 7.954508013030948"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 447.9119170506795,
+            "unit": "ns",
+            "range": "± 15.978209638718656"
           }
         ]
       }
