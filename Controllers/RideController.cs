@@ -342,6 +342,22 @@ public class RideController : ControllerBase
         }
     }
 
+    [HttpGet("rider/stats")]
+    [Authorize(Policy = "RequireRider")]
+    public async Task<IActionResult> GetRiderStats(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var riderId = RequireUserId();
+            var stats = await _rideService.GetRiderStatsAsync(riderId, cancellationToken);
+            return Ok(ApiResponse<object>.SuccessResponse("Rider stats fetched.", stats));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
     [HttpPut("rider/status")]
     [Authorize(Policy = "RequireRider")] // Only riders can toggle their availability
     public async Task<IActionResult> SetRiderStatus([FromBody] RiderStatusUpdateRequestDto request, CancellationToken cancellationToken)

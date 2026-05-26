@@ -552,6 +552,31 @@ public class RideService : IRideService
         return (true, null);
     }
 
+    public async Task<object> GetRiderStatsAsync(string riderId, CancellationToken cancellationToken = default)
+    {
+        var totalRides = await _dbContext.RideHistories
+            .CountAsync(h => h.RiderId == riderId, cancellationToken);
+
+        var todayStart = DateTime.UtcNow.Date;
+        var todayEarnings = await _dbContext.RideHistories
+            .Where(h => h.RiderId == riderId && h.CompletedAt >= todayStart)
+            .SumAsync(h => h.FinalFare, cancellationToken);
+
+        var ratings = await _dbContext.RideHistories
+            .Where(h => h.RiderId == riderId && h.RiderRating.HasValue)
+            .Select(h => h.RiderRating!.Value)
+            .ToListAsync(cancellationToken);
+
+        var averageRating = ratings.Any() ? ratings.Average() : 5.0;
+
+        return new
+        {
+            totalRides = totalRides,
+            todayEarnings = todayEarnings,
+            rating = averageRating
+        };
+    }
+
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)

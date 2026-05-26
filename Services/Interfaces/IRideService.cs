@@ -22,4 +22,5 @@ public interface IRideService
     Task RateRideAsync(string userId, string rideId, int rating, CancellationToken cancellationToken = default);
     Task<RideSummaryDto> RiderCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default);
     Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
+    Task<object> GetRiderStatsAsync(string riderId, CancellationToken cancellationToken = default);
 }
