@@ -39,6 +39,7 @@ namespace NearU_Backend_Revised.Data
             // Enable PostGIS Extension
             modelBuilder.HasPostgresExtension("postgis");
 
+
             // Configure RefreshToken entity
             modelBuilder.Entity<RefreshToken>(entity =>
             {

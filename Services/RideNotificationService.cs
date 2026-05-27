@@ -43,7 +43,7 @@ public class RideNotificationService : IRideNotificationService
                 cancellationToken);
     }
 
-    public async Task BroadcastLocationAsync(string rideId, double latitude, double longitude, CancellationToken cancellationToken = default)
+    public async Task BroadcastLocationAsync(string rideId, double latitude, double longitude, decimal? distanceToPickupKm, CancellationToken cancellationToken = default)
     {
         await _hubContext.Clients.Group($"ride:{rideId}")
             .SendAsync(
@@ -53,6 +53,7 @@ public class RideNotificationService : IRideNotificationService
                     rideId,
                     latitude,
                     longitude,
+                    distanceToPickupKm,
                     timestamp = DateTime.UtcNow
                 },
                 cancellationToken);

@@ -7,8 +7,8 @@ public interface IRideNotificationService
     /// <summary>Broadcasts a real-time state change to all SignalR clients subscribed to the ride group.</summary>
     Task NotifyStateChangeAsync(RideRequest rideRequest, CancellationToken cancellationToken = default);
 
-    /// <summary>Broadcasts the rider's GPS coordinates to the student tracking the ride.</summary>
-    Task BroadcastLocationAsync(string rideId, double latitude, double longitude, CancellationToken cancellationToken = default);
+    /// <summary>Broadcasts the rider's GPS coordinates and distance to pickup to the student tracking the ride.</summary>
+    Task BroadcastLocationAsync(string rideId, double latitude, double longitude, decimal? distanceToPickupKm, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends an FCM push notification to all online riders to notify them of a new ride request nearby.

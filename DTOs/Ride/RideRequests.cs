@@ -78,5 +78,6 @@ public class RideLocationResponseDto
     public string RideId { get; set; } = string.Empty;
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+    public decimal? DistanceToPickupKm { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 }

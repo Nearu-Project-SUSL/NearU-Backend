@@ -74,8 +74,8 @@ public class RideService : IRideService
         var pickup = CreatePoint(request.PickupLongitude, request.PickupLatitude);
         var dropoff = CreatePoint(request.DropoffLongitude, request.DropoffLatitude);
 
-        var pickupInside = await IsWithinFacultyRadiusAsync(pickup, cancellationToken);
-        var dropoffInside = await IsWithinFacultyRadiusAsync(dropoff, cancellationToken);
+        var pickupInside  = IsWithinFacultyRadius(pickup);
+        var dropoffInside = IsWithinFacultyRadius(dropoff);
         if (!pickupInside || !dropoffInside)
         {
             throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
@@ -335,9 +335,11 @@ public class RideService : IRideService
     public async Task SubmitHeartbeatAsync(string riderId, LocationHeartbeatRequestDto request, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, request.RideId, cancellationToken);
-        if (ride.Status != RideRequestStatus.Arrived && ride.Status != RideRequestStatus.InProgress)
+        if (ride.Status != RideRequestStatus.Accepted && 
+            ride.Status != RideRequestStatus.Arrived && 
+            ride.Status != RideRequestStatus.InProgress)
         {
-            throw new InvalidOperationException("Heartbeats are only accepted for arrived/in-progress rides.");
+            throw new InvalidOperationException("Heartbeats are only accepted for accepted/arrived/in-progress rides.");
         }
 
         if (ride.Status == RideRequestStatus.Arrived)
@@ -367,8 +369,10 @@ public class RideService : IRideService
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        var distanceToPickup = CalculateDistanceKm(point.Y, point.X, ride.PickupLocation.Y, ride.PickupLocation.X);
+
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
-        await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, cancellationToken);
+        await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, (decimal)distanceToPickup, cancellationToken);
     }
 
     public async Task<RideLocationResponseDto> GetLiveLocationAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
@@ -386,11 +390,18 @@ public class RideService : IRideService
         if (riderStatus.LastLocation == null)
             throw new InvalidOperationException("No live coordinates available yet.");
 
+        var distanceKm = CalculateDistanceKm(
+            riderStatus.LastLocation.Y,
+            riderStatus.LastLocation.X,
+            ride.PickupLocation.Y,
+            ride.PickupLocation.X);
+
         return new RideLocationResponseDto
         {
             RideId = ride.Id,
             Latitude = riderStatus.LastLocation.Y,
             Longitude = riderStatus.LastLocation.X,
+            DistanceToPickupKm = decimal.Round((decimal)distanceKm, 3, MidpointRounding.AwayFromZero),
             UpdatedAtUtc = riderStatus.LastSeen
         };
     }
@@ -424,6 +435,14 @@ public class RideService : IRideService
         double dropoffLat, double dropoffLng,
         CancellationToken cancellationToken = default)
     {
+        var pickup = CreatePoint(pickupLng, pickupLat);
+        var dropoff = CreatePoint(dropoffLng, dropoffLat);
+
+        if (!IsWithinFacultyRadius(pickup) || !IsWithinFacultyRadius(dropoff))
+        {
+            throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
+        }
+
         var distanceKm = CalculateDistanceKm(pickupLat, pickupLng, dropoffLat, dropoffLng);
         var estimatedFare = _rideSettings.BaseFare + ((decimal)distanceKm * _rideSettings.RatePerKm);
 
@@ -620,33 +639,17 @@ public class RideService : IRideService
         return _geometryFactory.CreatePoint(new Coordinate(longitude, latitude));
     }
 
-    private async Task<bool> IsWithinFacultyRadiusAsync(Point point, CancellationToken cancellationToken)
+    private static bool IsWithinFacultyRadius(Point point)
     {
-        await using var connection = _dbContext.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT ST_DWithin(
-                ST_SetSRID(ST_MakePoint(@lng, @lat), 4326)::geography,
-                ST_SetSRID(ST_MakePoint(@centerLng, @centerLat), 4326)::geography,
-                @radiusMeters
-            );
-            """;
-
-        AddParameter(command, "lng", point.X);
-        AddParameter(command, "lat", point.Y);
-        AddParameter(command, "centerLng", RideConstants.FacultyCentroidLng);
-        AddParameter(command, "centerLat", RideConstants.FacultyCentroidLat);
-        AddParameter(command, "radiusMeters", RideConstants.AllowedRadiusMeters);
-
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return result is bool flag && flag;
+        const double R = 6371000;
+        var dLat = ToRadians(RideConstants.FacultyCentroidLat - point.Y);
+        var dLon = ToRadians(RideConstants.FacultyCentroidLng - point.X);
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+            + Math.Cos(ToRadians(point.Y)) * Math.Cos(ToRadians(RideConstants.FacultyCentroidLat))
+            * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c <= RideConstants.AllowedRadiusMeters;
     }
-
     private static void AddParameter(IDbCommand command, string name, object value)
     {
         var parameter = command.CreateParameter();
