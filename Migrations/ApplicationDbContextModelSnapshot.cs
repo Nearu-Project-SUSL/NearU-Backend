@@ -59,6 +59,9 @@ namespace NearU_Backend_Revised.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("OwnerId")
+                        .HasColumnType("text");
+
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -70,6 +73,8 @@ namespace NearU_Backend_Revised.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Accommodations");
                 });
@@ -136,6 +141,9 @@ namespace NearU_Backend_Revised.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("OwnerId")
+                        .HasColumnType("text");
+
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -144,6 +152,8 @@ namespace NearU_Backend_Revised.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("FoodShops");
                 });
@@ -224,6 +234,9 @@ namespace NearU_Backend_Revised.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("OwnerId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -233,6 +246,8 @@ namespace NearU_Backend_Revised.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("GiftShops");
                 });
@@ -575,6 +590,38 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("RiderStatuses");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.Testimonial", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Testimonials");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.TrackingLog", b =>
                 {
                     b.Property<string>("Id")
@@ -638,6 +685,9 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ProfilePictureUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
@@ -657,6 +707,46 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.UserFcmToken", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserFcmTokens");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.AccommodationItem", b =>
                 {
                     b.HasOne("NearU_Backend_Revised.Models.Accommodation", "Accommodation")
@@ -668,6 +758,16 @@ namespace NearU_Backend_Revised.Migrations
                     b.Navigation("Accommodation");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.FoodShop", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.GiftProduct", b =>
                 {
                     b.HasOne("NearU_Backend_Revised.Models.GiftShop", "GiftShop")
@@ -677,6 +777,16 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired();
 
                     b.Navigation("GiftShop");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.GiftShop", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.Job", b =>
@@ -741,6 +851,17 @@ namespace NearU_Backend_Revised.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NearU_Backend_Revised.Models.Testimonial", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NearU_Backend_Revised.Models.TrackingLog", b =>
                 {
                     b.HasOne("NearU_Backend_Revised.Models.RideRequest", "RideRequest")
@@ -750,6 +871,17 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired();
 
                     b.Navigation("RideRequest");
+                });
+
+            modelBuilder.Entity("NearU_Backend_Revised.Models.UserFcmToken", b =>
+                {
+                    b.HasOne("NearU_Backend_Revised.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>

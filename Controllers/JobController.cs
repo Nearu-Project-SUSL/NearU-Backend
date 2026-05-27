@@ -113,7 +113,7 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
         [HttpPost]
-        [Authorize]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> CreateJob([FromBody] CreateJob dto)
         {
             try
@@ -134,7 +134,7 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> UpdateJob(string id, [FromBody] UpdateJob dto)
         {
             try
@@ -162,7 +162,7 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> DeleteJob(string id)
         {
             try
@@ -186,7 +186,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost("upload-logo")]
-        [Authorize]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadLogo([FromForm] IFormFile file)
         {

@@ -1,4 +1,11 @@
 services:
+  nearu-redis:
+    image: redis:7-alpine
+    container_name: nearu-redis
+    restart: always
+    networks:
+      - nearu-internal
+
   nearu-db:
     image: postgis/postgis:17-3.5-alpine
     container_name: nearu-db
@@ -20,10 +27,12 @@ services:
     restart: unless-stopped
     depends_on:
       - nearu-db
+      - nearu-redis
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__PostgreSQL=Host=nearu-db;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__Redis=nearu-redis:6379
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
       - JwtSettings__Issuer=https://api.nearusab.me
       - JwtSettings__Audience=NearU-Client
@@ -32,11 +41,33 @@ services:
       - ImageKit__PublicKey=${IMAGEKIT_PUBLIC_KEY}
       - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
       - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
+      - Firebase__CredentialsPath=/app/firebase-adminsdk.json
+      - SendGrid__ApiKey=${SendGrid__ApiKey}
+      - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - AdminSeed__Email=${AdminSeed__Email}
+    volumes:
+      - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:
       - nearu-internal
       - nearu-proxy
     # Note: Healthcheck is removed because .NET "Chiseled" images 
     # do not contain 'curl' or a shell to run the test.
+
+  dozzle:
+    container_name: dozzle
+    image: amir20/dozzle:latest
+    restart: unless-stopped
+    volumes:
+      # Mount the host docker socket as Read-Only (:ro) so Dozzle can stream logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    environment:
+      - DOZZLE_LEVEL=info
+      - DOZZLE_HOSTNAME=NearU-Dev-Droplet
+    networks:
+      - nearu-internal
+      - nearu-proxy
 
 networks:
   nearu-internal:
