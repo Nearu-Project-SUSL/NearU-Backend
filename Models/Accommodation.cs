@@ -38,6 +38,15 @@ namespace NearU_Backend_Revised.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// The Business user who owns/manages this accommodation.
+        /// Nullable to allow Admin-created listings without a specific owner.
+        /// </summary>
+        public string? OwnerId { get; set; }
+
+        [ForeignKey("OwnerId")]
+        public virtual User? Owner { get; set; }
+
         // Navigation property for Accommodation Items
         public virtual ICollection<AccommodationItem> AccommodationItems { get; set; } = new List<AccommodationItem>();
     }

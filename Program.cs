@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NearU_Backend_Revised.BackgroundServices;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
-using NearU_Backend_Revised.BackgroundServices;
 using NearU_Backend_Revised.Hubs;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Data;
@@ -102,6 +102,23 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromMinutes(5)
     };
 
+    // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
+    // JWT as ?access_token=... in the query string. This reads it transparently.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            
+            if (!string.IsNullOrEmpty(accessToken) && 
+                path.StartsWithSegments("/hubs/rides"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 
 });
 
@@ -109,15 +126,30 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAuthenticatedUser", policy =>
-    {
-        policy.RequireAuthenticatedUser();
-    });
+        policy.RequireAuthenticatedUser());
 
     options.AddPolicy("RequireUserId", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.RequireClaim("userId");
     });
+
+    // ── Role-based policies ──────────────────────────────────────────────────
+    options.AddPolicy("RequireStudent", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Student));
+
+    options.AddPolicy("RequireRider", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Rider));
+
+    options.AddPolicy("RequireBusiness", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business));
+
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Admin));
+
+    // Business owners and admins can both manage listings
+    options.AddPolicy("RequireBusinessOrAdmin", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business, UserRoles.Admin));
 });
 
 builder.Services.Configure<ImageKitSettings>(
@@ -131,11 +163,17 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
+//testimonial
+builder.Services.AddScoped<ITestimonialRepository, TestimonialRepository>();
+builder.Services.AddScoped<ITestimonialService, TestimonialService>();
+
+
 // Accommodation feature
 builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
 builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
+
 
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
@@ -156,24 +194,29 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorCodesToAdd: null
         );
         npgsqlOptions.CommandTimeout(30);
+        npgsqlOptions.UseNetTopologySuite(); // map Point type to PostGIS geography
     });
 });
 
-// Register other repositories and services
+// Register repositories and services
+builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<AdminSeederService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
-// Configure RideSettings
 builder.Services.Configure<RideSettings>(
     builder.Configuration.GetSection("RideSettings"));
 
+builder.Services.AddScoped<IRideRepository, RideRepository>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
 builder.Services.AddScoped<IRideNotificationService, RideNotificationService>();
+builder.Services.AddScoped<IFcmTokenService, FcmTokenService>();
 builder.Services.AddHostedService<GhostRiderCleanupWorker>();
 builder.Services.AddHostedService<RideLifecycleWorker>();
 
@@ -227,12 +270,58 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate();
+        
+        try
+        {
+            context.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(ex, "Database migration failed (possibly due to missing PostGIS extension locally). Continuing with fallback table creation...");
+        }
+
+        // Ensure GiftShop tables exist in case EF Migrations History is out of sync
+        context.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""GiftShops"" (
+                ""Id"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""ImageUrl"" character varying(500),
+                ""LocationName"" character varying(150) NOT NULL,
+                ""Phone"" character varying(20) NOT NULL,
+                ""Email"" character varying(150),
+                ""Address"" character varying(500) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftShops"" PRIMARY KEY (""Id"")
+            );
+
+            CREATE TABLE IF NOT EXISTS ""GiftProducts"" (
+                ""Id"" uuid NOT NULL,
+                ""GiftShopId"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""PhotoUrl"" character varying(500),
+                ""Price"" numeric(18,2) NOT NULL,
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_GiftProducts"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_GiftProducts_GiftShops_GiftShopId"" FOREIGN KEY (""GiftShopId"") REFERENCES ""GiftShops"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+        ");
+
+        // Seed the initial Admin account from configuration
+        var seeder = services.GetRequiredService<AdminSeederService>();
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        logger.LogCritical(ex, "FATAL: Database initialization fallback failed!");
+        throw;
     }
 }
 
@@ -264,5 +353,8 @@ app.MapHub<RidesHub>("/hubs/rides", options =>
     // Enable stateful reconnects to handle clients losing connection temporarily
     options.AllowStatefulReconnects = true;
 });
+
+// Health check endpoint — polled by Docker every 30 seconds
+app.MapHealthChecks("/healthz");
 
 app.Run();

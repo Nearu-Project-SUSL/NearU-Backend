@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.GiftProduct;
 using NearU_Backend_Revised.DTOs.GiftShop;
@@ -17,13 +18,14 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(
-            [FromQuery] string? keyword,
-            [FromQuery] string? location,
-            [FromQuery] bool? isActive)
+        public async Task<IActionResult> GetAll([FromQuery] string? keyword, [FromQuery] string? location, [FromQuery] bool? isActive)
         {
-            var result = await _giftShopService.GetAllAsync(keyword, location, isActive);
-            return Ok(result);
+            try {
+                var giftShops = await _giftShopService.GetAllAsync(keyword, location, isActive);
+                return Ok(giftShops);
+            } catch (Exception ex) {
+                return StatusCode(500, new { message = ex.Message, inner = ex.InnerException?.Message, stackTrace = ex.StackTrace });
+            }
         }
 
         [HttpGet("{id:guid}")]
@@ -37,6 +39,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Create([FromForm] CreateGiftShopDto dto)
         {
             if (!ModelState.IsValid)
@@ -47,6 +50,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPut("{id:guid}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateGiftShopDto dto)
         {
             if (!ModelState.IsValid)
@@ -60,6 +64,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpDelete("{id:guid}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var deleted = await _giftShopService.DeleteGiftShopAsync(id);
@@ -70,6 +75,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost("{giftShopId:guid}/products")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> AddProduct(Guid giftShopId, [FromForm] CreateGiftProductDto dto)
         {
             if (!ModelState.IsValid)
@@ -83,6 +89,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPut("products/{productId:guid}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> UpdateProduct(Guid productId, [FromForm] UpdateGiftProductDto dto)
         {
             if (!ModelState.IsValid)
@@ -96,6 +103,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpDelete("products/{productId:guid}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> DeleteProduct(Guid productId)
         {
             var deleted = await _giftShopService.DeleteProductAsync(productId);

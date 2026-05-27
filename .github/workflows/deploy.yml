@@ -136,4 +136,10 @@ jobs:
             docker compose pull
             docker compose up -d
             docker system prune -f
-            echo "✅ Deployment complete at $(date)"
+            echo "⏳ Waiting 10 seconds for container health check..."
+            sleep 10
+            if [ "$(docker inspect -f '{{.State.Status}}' nearu-api)" != "running" ]; then
+              echo "❌ Deployment failed: nearu-api container crashed on startup!"
+              exit 1
+            fi
+            echo "✅ Deployment complete and verified at $(date)"
