@@ -1,4 +1,5 @@
 using NearU_Backend_Revised.DTOs.Ride;
+using NearU_Backend_Revised.Models;
 
 namespace NearU_Backend_Revised.Services.Interfaces;
 
@@ -13,6 +14,7 @@ public interface IRideService
     Task<RideSummaryDto> RefreshOtpAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
     Task<RideSummaryDto> CancelAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
     Task SetRiderStatusAsync(string riderId, bool isOnline, CancellationToken cancellationToken = default);
+    Task<RiderStatus?> GetRiderStatusAsync(string riderId, CancellationToken cancellationToken = default);
     Task SubmitHeartbeatAsync(string riderId, LocationHeartbeatRequestDto request, CancellationToken cancellationToken = default);
     Task<RideLocationResponseDto> GetLiveLocationAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
     Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 5000, CancellationToken cancellationToken = default);
@@ -20,4 +22,5 @@ public interface IRideService
     Task RateRideAsync(string userId, string rideId, int rating, CancellationToken cancellationToken = default);
     Task<RideSummaryDto> RiderCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default);
     Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
+    Task<object> GetRiderStatsAsync(string riderId, CancellationToken cancellationToken = default);
 }

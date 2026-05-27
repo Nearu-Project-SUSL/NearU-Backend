@@ -310,6 +310,28 @@ public class RideService : IRideService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<RiderStatus?> GetRiderStatusAsync(string riderId, CancellationToken cancellationToken = default)
+    {
+        var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        if (riderStatus == null)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == riderId && u.Role == "Rider", cancellationToken);
+            if (user != null)
+            {
+                riderStatus = new RiderStatus
+                {
+                    RiderId = riderId,
+                    IsOnline = false,
+                    ApprovalStatus = RiderApprovalStatus.Pending,
+                    LastSeen = DateTime.UtcNow
+                };
+                _dbContext.RiderStatuses.Add(riderStatus);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+        return riderStatus;
+    }
+
     public async Task SubmitHeartbeatAsync(string riderId, LocationHeartbeatRequestDto request, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, request.RideId, cancellationToken);
@@ -528,6 +550,31 @@ public class RideService : IRideService
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
 
         return (true, null);
+    }
+
+    public async Task<object> GetRiderStatsAsync(string riderId, CancellationToken cancellationToken = default)
+    {
+        var totalRides = await _dbContext.RideHistories
+            .CountAsync(h => h.RiderId == riderId, cancellationToken);
+
+        var todayStart = DateTime.UtcNow.Date;
+        var todayEarnings = await _dbContext.RideHistories
+            .Where(h => h.RiderId == riderId && h.CompletedAt >= todayStart)
+            .SumAsync(h => h.FinalFare, cancellationToken);
+
+        var ratings = await _dbContext.RideHistories
+            .Where(h => h.RiderId == riderId && h.RiderRating.HasValue)
+            .Select(h => h.RiderRating!.Value)
+            .ToListAsync(cancellationToken);
+
+        var averageRating = ratings.Any() ? ratings.Average() : 5.0;
+
+        return new
+        {
+            totalRides = totalRides,
+            todayEarnings = todayEarnings,
+            rating = averageRating
+        };
     }
 
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)

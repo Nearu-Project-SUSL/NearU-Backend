@@ -44,6 +44,7 @@ services:
       - Firebase__CredentialsPath=/app/firebase-adminsdk.json
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - AdminSeed__Email=${AdminSeed__Email}
     volumes:
       - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:
@@ -51,6 +52,22 @@ services:
       - nearu-proxy
     # Note: Healthcheck is removed because .NET "Chiseled" images 
     # do not contain 'curl' or a shell to run the test.
+
+  dozzle:
+    container_name: dozzle
+    image: amir20/dozzle:latest
+    restart: unless-stopped
+    volumes:
+      # Mount the host docker socket as Read-Only (:ro) so Dozzle can stream logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    environment:
+      - DOZZLE_LEVEL=info
+      - DOZZLE_HOSTNAME=NearU-Dev-Droplet
+    networks:
+      - nearu-internal
+      - nearu-proxy
 
 networks:
   nearu-internal:
