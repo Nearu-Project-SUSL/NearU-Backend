@@ -335,9 +335,11 @@ public class RideService : IRideService
     public async Task SubmitHeartbeatAsync(string riderId, LocationHeartbeatRequestDto request, CancellationToken cancellationToken = default)
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, request.RideId, cancellationToken);
-        if (ride.Status != RideRequestStatus.Arrived && ride.Status != RideRequestStatus.InProgress)
+        if (ride.Status != RideRequestStatus.Accepted && 
+            ride.Status != RideRequestStatus.Arrived && 
+            ride.Status != RideRequestStatus.InProgress)
         {
-            throw new InvalidOperationException("Heartbeats are only accepted for arrived/in-progress rides.");
+            throw new InvalidOperationException("Heartbeats are only accepted for accepted/arrived/in-progress rides.");
         }
 
         if (ride.Status == RideRequestStatus.Arrived)
@@ -367,8 +369,10 @@ public class RideService : IRideService
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        var distanceToPickup = CalculateDistanceKm(point.Y, point.X, ride.PickupLocation.Y, ride.PickupLocation.X);
+
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
-        await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, cancellationToken);
+        await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, (decimal)distanceToPickup, cancellationToken);
     }
 
     public async Task<RideLocationResponseDto> GetLiveLocationAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
@@ -386,11 +390,18 @@ public class RideService : IRideService
         if (riderStatus.LastLocation == null)
             throw new InvalidOperationException("No live coordinates available yet.");
 
+        var distanceKm = CalculateDistanceKm(
+            riderStatus.LastLocation.Y,
+            riderStatus.LastLocation.X,
+            ride.PickupLocation.Y,
+            ride.PickupLocation.X);
+
         return new RideLocationResponseDto
         {
             RideId = ride.Id,
             Latitude = riderStatus.LastLocation.Y,
             Longitude = riderStatus.LastLocation.X,
+            DistanceToPickupKm = decimal.Round((decimal)distanceKm, 3, MidpointRounding.AwayFromZero),
             UpdatedAtUtc = riderStatus.LastSeen
         };
     }
@@ -424,6 +435,14 @@ public class RideService : IRideService
         double dropoffLat, double dropoffLng,
         CancellationToken cancellationToken = default)
     {
+        var pickup = CreatePoint(pickupLng, pickupLat);
+        var dropoff = CreatePoint(dropoffLng, dropoffLat);
+
+        if (!IsWithinFacultyRadius(pickup) || !IsWithinFacultyRadius(dropoff))
+        {
+            throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
+        }
+
         var distanceKm = CalculateDistanceKm(pickupLat, pickupLng, dropoffLat, dropoffLng);
         var estimatedFare = _rideSettings.BaseFare + ((decimal)distanceKm * _rideSettings.RatePerKm);
 
