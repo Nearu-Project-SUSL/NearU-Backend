@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779965535226,
+  "lastUpdate": 1779965994215,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1496,6 +1496,60 @@ window.BENCHMARK_DATA = {
             "value": 441.5935101509094,
             "unit": "ns",
             "range": "± 5.509957894199446"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1c4a43bfb6c994e46c3837545e32d341f5060dcb",
+          "message": "Merge pull request #164 from Nearu-Project-SUSL/NU-38-Rides-Mobility\n\nAdd unit tests for ride location verification and remove unused dependency",
+          "timestamp": "2026-05-28T16:28:40+05:30",
+          "tree_id": "e1f2b7c6e51ff23a428f2332dbd768878cd0c450",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/1c4a43bfb6c994e46c3837545e32d341f5060dcb"
+        },
+        "date": 1779965993682,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 8089.919403076172,
+            "unit": "ns",
+            "range": "± 137.9927996440572"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 145524565.75,
+            "unit": "ns",
+            "range": "± 276364.233369321"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 13997.291325887045,
+            "unit": "ns",
+            "range": "± 15.184862181464423"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1260.9623222351074,
+            "unit": "ns",
+            "range": "± 14.887201270197345"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 414.180340607961,
+            "unit": "ns",
+            "range": "± 0.5944638716368498"
           }
         ]
       }
