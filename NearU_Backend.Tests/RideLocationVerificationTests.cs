@@ -20,6 +20,7 @@ public class RideLocationVerificationTests
     private readonly RideService _rideService;
     private readonly Mock<IRideStateMachine> _stateMachineMock = new();
     private readonly Mock<IRideNotificationService> _notificationServiceMock = new();
+    private readonly Mock<IOsrmService> _osrmServiceMock = new();
     private readonly Mock<ILogger<RideService>> _loggerMock = new();
 
     public RideLocationVerificationTests()
@@ -35,11 +36,28 @@ public class RideLocationVerificationTests
             RatePerKm = 20
         });
 
+        // Return a fixed road distance so tests are deterministic
+        // and never make real HTTP calls to OSRM.
+        _osrmServiceMock
+            .Setup(s => s.GetRoadDistanceKmAsync(
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1.5);
+
+        _osrmServiceMock
+            .Setup(s => s.GetRouteAsync(
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((1.5, 300.0));
+
         _rideService = new RideService(
             _dbContext,
             rideSettings,
             _stateMachineMock.Object,
             _notificationServiceMock.Object,
+            _osrmServiceMock.Object,
             _loggerMock.Object);
     }
 
@@ -76,6 +94,7 @@ public class RideLocationVerificationTests
         // Assert
         Assert.Null(exception);
         var updatedRiderStatus = await _dbContext.RiderStatuses.FindAsync(riderId);
+        Assert.NotNull(updatedRiderStatus);                          // guard: FindAsync can return null
         Assert.NotNull(updatedRiderStatus.LastLocation);
         Assert.Equal(6.7150, updatedRiderStatus.LastLocation.Y);
     }
