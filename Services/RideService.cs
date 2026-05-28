@@ -20,6 +20,7 @@ public class RideService : IRideService
     private readonly RideSettings _rideSettings;
     private readonly IRideStateMachine _stateMachine;
     private readonly IRideNotificationService _rideNotificationService;
+    private readonly IOsrmService _osrm;
     private readonly GeometryFactory _geometryFactory;
     private readonly ILogger<RideService> _logger;
 
@@ -28,12 +29,14 @@ public class RideService : IRideService
         IOptions<RideSettings> rideSettings,
         IRideStateMachine stateMachine,
         IRideNotificationService rideNotificationService,
+        IOsrmService osrm,
         ILogger<RideService> logger)
     {
         _dbContext = dbContext;
         _rideSettings = rideSettings.Value;
         _stateMachine = stateMachine;
         _rideNotificationService = rideNotificationService;
+        _osrm = osrm;
         _logger = logger;
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
     }
@@ -81,11 +84,13 @@ public class RideService : IRideService
             throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
         }
 
-        var distanceKm = CalculateDistanceKm(
+        // Use OSRM for true road-network distance (falls back to Haversine on failure)
+        var distanceKm = await _osrm.GetRoadDistanceKmAsync(
             request.PickupLatitude,
             request.PickupLongitude,
             request.DropoffLatitude,
-            request.DropoffLongitude);
+            request.DropoffLongitude,
+            cancellationToken);
 
         var estimatedFare = _rideSettings.BaseFare + ((decimal)distanceKm * _rideSettings.RatePerKm);
         var now = DateTime.UtcNow;
@@ -369,7 +374,12 @@ public class RideService : IRideService
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        var distanceToPickup = CalculateDistanceKm(point.Y, point.X, ride.PickupLocation.Y, ride.PickupLocation.X);
+
+        // Road distance from the rider's current position to the pickup point
+        var distanceToPickup = await _osrm.GetRoadDistanceKmAsync(
+            point.Y, point.X,
+            ride.PickupLocation.Y, ride.PickupLocation.X,
+            cancellationToken);
 
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
         await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, (decimal)distanceToPickup, cancellationToken);
@@ -390,11 +400,12 @@ public class RideService : IRideService
         if (riderStatus.LastLocation == null)
             throw new InvalidOperationException("No live coordinates available yet.");
 
-        var distanceKm = CalculateDistanceKm(
+        var distanceKm = await _osrm.GetRoadDistanceKmAsync(
             riderStatus.LastLocation.Y,
             riderStatus.LastLocation.X,
             ride.PickupLocation.Y,
-            ride.PickupLocation.X);
+            ride.PickupLocation.X,
+            cancellationToken);
 
         return new RideLocationResponseDto
         {
@@ -430,7 +441,7 @@ public class RideService : IRideService
     /// Pure fare calculation — does not create any database record.
     /// Used by the client to show an estimate before the student confirms.
     /// </summary>
-    public Task<FareEstimateResponseDto> EstimateFareAsync(
+    public async Task<FareEstimateResponseDto> EstimateFareAsync(
         double pickupLat, double pickupLng,
         double dropoffLat, double dropoffLng,
         CancellationToken cancellationToken = default)
@@ -443,16 +454,20 @@ public class RideService : IRideService
             throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
         }
 
-        var distanceKm = CalculateDistanceKm(pickupLat, pickupLng, dropoffLat, dropoffLng);
+        // Use OSRM for true road-network distance (falls back to Haversine on failure)
+        var (distanceKm, durationSecs) = await _osrm.GetRouteAsync(
+            pickupLat, pickupLng, dropoffLat, dropoffLng, cancellationToken);
+
         var estimatedFare = _rideSettings.BaseFare + ((decimal)distanceKm * _rideSettings.RatePerKm);
 
-        return Task.FromResult(new FareEstimateResponseDto
+        return new FareEstimateResponseDto
         {
             DistanceKm = decimal.Round((decimal)distanceKm, 3, MidpointRounding.AwayFromZero),
             EstimatedFare = decimal.Round(estimatedFare, 2, MidpointRounding.AwayFromZero),
             BaseFare = _rideSettings.BaseFare,
-            RatePerKm = _rideSettings.RatePerKm
-        });
+            RatePerKm = _rideSettings.RatePerKm,
+            EstimatedDurationSeconds = (int)Math.Round(durationSecs)
+        };
     }
 
     /// <summary>
@@ -658,6 +673,8 @@ public class RideService : IRideService
         command.Parameters.Add(parameter);
     }
 
+    // NOTE: CalculateDistanceKm (Haversine) is kept for use in IsWithinFacultyRadius
+    // and as the OSRM fallback — see OsrmService.HaversineKm for the live fallback.
     private static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
     {
         const double earthRadiusKm = 6371;

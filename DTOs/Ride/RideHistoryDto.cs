@@ -37,6 +37,12 @@ public class FareEstimateResponseDto
     public decimal DistanceKm { get; set; }
     public decimal BaseFare { get; set; }
     public decimal RatePerKm { get; set; }
+
+    /// <summary>
+    /// Estimated travel duration in seconds as reported by OSRM.
+    /// 0 when OSRM is unavailable and Haversine fallback was used.
+    /// </summary>
+    public int EstimatedDurationSeconds { get; set; }
 }
 
 /// <summary>
