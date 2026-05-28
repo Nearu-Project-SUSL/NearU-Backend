@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NearU_Backend_Revised.Data;
 using NetTopologySuite.Geometries;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NearU_Backend_Revised.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260516092836_AddTestimonialsTable")]
+    partial class AddTestimonialsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,9 +62,6 @@ namespace NearU_Backend_Revised.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("text");
-
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -73,8 +73,6 @@ namespace NearU_Backend_Revised.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
 
                     b.ToTable("Accommodations");
                 });
@@ -141,9 +139,6 @@ namespace NearU_Backend_Revised.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("text");
-
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -152,8 +147,6 @@ namespace NearU_Backend_Revised.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
 
                     b.ToTable("FoodShops");
                 });
@@ -234,9 +227,6 @@ namespace NearU_Backend_Revised.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("text");
-
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -246,8 +236,6 @@ namespace NearU_Backend_Revised.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
 
                     b.ToTable("GiftShops");
                 });
@@ -685,9 +673,6 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ProfilePictureUrl")
-                        .HasColumnType("text");
-
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
@@ -737,16 +722,6 @@ namespace NearU_Backend_Revised.Migrations
                     b.ToTable("UserFcmTokens");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Accommodation", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("NearU_Backend_Revised.Models.AccommodationItem", b =>
                 {
                     b.HasOne("NearU_Backend_Revised.Models.Accommodation", "Accommodation")
@@ -758,16 +733,6 @@ namespace NearU_Backend_Revised.Migrations
                     b.Navigation("Accommodation");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.FoodShop", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("NearU_Backend_Revised.Models.GiftProduct", b =>
                 {
                     b.HasOne("NearU_Backend_Revised.Models.GiftShop", "GiftShop")
@@ -777,16 +742,6 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired();
 
                     b.Navigation("GiftShop");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.GiftShop", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.Job", b =>

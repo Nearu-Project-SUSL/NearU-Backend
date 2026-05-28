@@ -21,15 +21,14 @@ namespace NearU_Backend_Revised.Data
         public DbSet<MenuItem> MenuItems { get; set; } = null!;
         public DbSet<AccommodationItem> AccommodationItems { get; set; } = null!;
         public DbSet<Job> Jobs { get; set; } = null!;
+        public DbSet<Testimonial> Testimonials { get; set; }
         
-        // Ride & Tracking DbSets
         public DbSet<RiderStatus> RiderStatuses { get; set; } = null!;
         public DbSet<TrackingLog> TrackingLogs { get; set; } = null!;
         public DbSet<RideRequest> RideRequests { get; set; } = null!;
         public DbSet<RideHistory> RideHistories { get; set; } = null!;
         public DbSet<UserFcmToken> UserFcmTokens { get; set; } = null!;
 
-        // Add these new DbSets
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
 
@@ -39,6 +38,7 @@ namespace NearU_Backend_Revised.Data
 
             // Enable PostGIS Extension
             modelBuilder.HasPostgresExtension("postgis");
+
 
             // Configure RefreshToken entity
             modelBuilder.Entity<RefreshToken>(entity =>
@@ -119,6 +119,15 @@ namespace NearU_Backend_Revised.Data
 
                 entity.Property(gs => gs.UpdatedAt)
                     .IsRequired();
+
+                // OwnerId FK — nullable so Admin-created shops have no specific owner
+                entity.HasOne(gs => gs.Owner)
+                    .WithMany()
+                    .HasForeignKey(gs => gs.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                entity.HasIndex(gs => gs.OwnerId);
             });
 
             // Configure GiftProduct entity
@@ -293,6 +302,15 @@ namespace NearU_Backend_Revised.Data
                 entity.Property(acc => acc.CreatedAt)
                     .HasDefaultValueSql("NOW()");
 
+                // OwnerId FK — nullable so Admin-created listings have no specific owner
+                entity.HasOne(acc => acc.Owner)
+                    .WithMany()
+                    .HasForeignKey(acc => acc.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                entity.HasIndex(acc => acc.OwnerId);
+
                 entity.HasMany(acc => acc.AccommodationItems)
                     .WithOne(mi => mi.Accommodation)
                     .HasForeignKey(mi => mi.AccommodationId)
@@ -339,6 +357,15 @@ namespace NearU_Backend_Revised.Data
 
                 entity.Property(fs => fs.CreatedAt)
                     .HasDefaultValueSql("NOW()");
+
+                // OwnerId FK — nullable so Admin-created shops have no specific owner
+                entity.HasOne(fs => fs.Owner)
+                    .WithMany()
+                    .HasForeignKey(fs => fs.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                entity.HasIndex(fs => fs.OwnerId);
 
                 entity.HasMany(fs => fs.MenuItems)
                     .WithOne(mi => mi.FoodShop)

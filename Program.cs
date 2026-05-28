@@ -110,7 +110,9 @@ builder.Services.AddAuthentication(options =>
         {
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            
+            if (!string.IsNullOrEmpty(accessToken) && 
+                path.StartsWithSegments("/hubs/rides"))
             {
                 context.Token = accessToken;
             }
@@ -124,15 +126,30 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAuthenticatedUser", policy =>
-    {
-        policy.RequireAuthenticatedUser();
-    });
+        policy.RequireAuthenticatedUser());
 
     options.AddPolicy("RequireUserId", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.RequireClaim("userId");
     });
+
+    // ── Role-based policies ──────────────────────────────────────────────────
+    options.AddPolicy("RequireStudent", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Student));
+
+    options.AddPolicy("RequireRider", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Rider));
+
+    options.AddPolicy("RequireBusiness", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business));
+
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Admin));
+
+    // Business owners and admins can both manage listings
+    options.AddPolicy("RequireBusinessOrAdmin", policy =>
+        policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business, UserRoles.Admin));
 });
 
 builder.Services.Configure<ImageKitSettings>(
@@ -146,6 +163,11 @@ builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
+//testimonial
+builder.Services.AddScoped<ITestimonialRepository, TestimonialRepository>();
+builder.Services.AddScoped<ITestimonialService, TestimonialService>();
+
+
 // Accommodation feature
 builder.Services.AddScoped<IAccommodationRepository, AccommodationRepository>();
 builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemRepository>();
@@ -153,7 +175,6 @@ builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
 
-// Rides feature (registered below with full setup)
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
@@ -177,11 +198,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     });
 });
 
-// Register other repositories and services
+// Register repositories and services
+builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<AdminSeederService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, JobService>();
 
@@ -246,7 +270,16 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate();
+        
+        try
+        {
+            context.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(ex, "Database migration failed (possibly due to missing PostGIS extension locally). Continuing with fallback table creation...");
+        }
 
         // Ensure GiftShop tables exist in case EF Migrations History is out of sync
         context.Database.ExecuteSqlRaw(@"
@@ -279,11 +312,15 @@ using (var scope = app.Services.CreateScope())
 
             CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
         ");
+
+        // Seed the initial Admin account from configuration
+        var seeder = services.GetRequiredService<AdminSeederService>();
+        await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogCritical(ex, "FATAL: Database migration failed!");
+        logger.LogCritical(ex, "FATAL: Database initialization fallback failed!");
         throw;
     }
 }

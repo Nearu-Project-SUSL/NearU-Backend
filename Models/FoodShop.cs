@@ -25,6 +25,15 @@ namespace NearU_Backend_Revised.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// The Business user who owns/manages this shop.
+        /// Nullable to allow Admin-created shops without a specific owner.
+        /// </summary>
+        public string? OwnerId { get; set; }
+
+        [ForeignKey("OwnerId")]
+        public virtual User? Owner { get; set; }
+
         // Navigation property for menu items
         public virtual ICollection<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
     }

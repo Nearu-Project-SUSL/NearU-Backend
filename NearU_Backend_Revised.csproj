@@ -8,6 +8,7 @@
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
     <NoWarn>$(NoWarn);IL3050;IL2026</NoWarn>
     <UserSecretsId>514ec3ad-ee12-4ecf-9f05-1e78f9885c7a</UserSecretsId>
+    <DefaultItemExcludes>$(DefaultItemExcludes);NearU_Backend.Tests\**;NearU.Benchmarks\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <!-- Exclude the test project directory from the main build -->
@@ -41,6 +42,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.7" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageReference Include="SendGrid" Version="9.29.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
   </ItemGroup>
 
