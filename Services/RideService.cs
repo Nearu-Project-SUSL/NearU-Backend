@@ -120,13 +120,26 @@ public class RideService : IRideService
             .Select(rs => rs.RiderId)
             .ToListAsync(cancellationToken);
 
-        // Push to riders whose app is backgrounded/closed — fire-and-forget so it never delays the response
-        _ = Task.Run(() =>
-            _rideNotificationService.SendNewRideRequestPushAsync(
-                ride, onlineRiderIds, CancellationToken.None),
-            CancellationToken.None);
-
+        //signal r (when app open)
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+        
+        // Push to riders whose app is backgrounded/closed — fire-and-forget so it never delays the response
+        if(onlineRiderIds.Any())
+        {
+            _ = Task.Run(async () => {
+                try
+                {
+                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, onlineRiderIds, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to send FCM push for ride {RideId}",
+                        ride.Id);
+                }
+            });
+        }
         return MapSummary(ride);
     }
 
