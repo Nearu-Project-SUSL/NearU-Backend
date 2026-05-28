@@ -21,6 +21,21 @@ services:
     networks:
       - nearu-internal
 
+  # ── OSRM routing engine ───────────────────────────────────────────────────
+  # Map data must be pre-processed on the VPS before first run — see README.
+  # Pre-processed files live in /etc/nearu/osrm/ on the host.
+  nearu-osrm:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    container_name: nearu-osrm
+    restart: always
+    command: osrm-routed --algorithm mld /data/sri-lanka-latest.osrm --max-table-size 1000
+    volumes:
+      - /etc/nearu/osrm:/data:ro   # read-only: processed map files
+    networks:
+      - nearu-internal
+    # Not exposed to the internet — only reachable by the API container
+    # ─────────────────────────────────────────────────────────────────────────
+
   api:
     image: ghcr.io/nearu-project-susl/nearu-backend:latest
     container_name: nearu-api
@@ -28,6 +43,7 @@ services:
     depends_on:
       - nearu-db
       - nearu-redis
+      - nearu-osrm
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
@@ -45,12 +61,18 @@ services:
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
       - AdminSeed__Email=${AdminSeed__Email}
+      # ── OSRM ──────────────────────────────────────────────────────────────
+      - OsrmSettings__BaseUrl=http://nearu-osrm:5000
+      - OsrmSettings__Profile=driving
+      - OsrmSettings__TimeoutSeconds=5
+      - OsrmSettings__ThrowOnFailure=false
+      # ──────────────────────────────────────────────────────────────────────
     volumes:
       - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
     networks:
       - nearu-internal
       - nearu-proxy
-    # Note: Healthcheck is removed because .NET "Chiseled" images 
+    # Note: Healthcheck is removed because .NET "Chiseled" images
     # do not contain 'curl' or a shell to run the test.
 
   dozzle:

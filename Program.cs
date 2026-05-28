@@ -212,6 +212,15 @@ builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.Configure<RideSettings>(
     builder.Configuration.GetSection("RideSettings"));
 
+// ── OSRM routing service ─────────────────────────────────────────────────────
+builder.Services.Configure<OsrmSettings>(
+    builder.Configuration.GetSection("OsrmSettings"));
+// AddHttpClient<T> creates a typed HttpClient scoped to OsrmService.
+// Retry/timeout configuration lives in OsrmSettings; the HttpClient here is
+// intentionally vanilla so OsrmService can set BaseAddress/Timeout itself.
+builder.Services.AddHttpClient<IOsrmService, OsrmService>();
+// ─────────────────────────────────────────────────────────────────────────────
+
 builder.Services.AddScoped<IRideRepository, RideRepository>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
