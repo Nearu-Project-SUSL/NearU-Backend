@@ -120,30 +120,31 @@ public class RideService : IRideService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         // Notify online riders via SignalR (app is open)
+        var onlineRiderIds = await _dbContext.RiderStatuses
+            .Where(rs => rs.IsOnline)
+            .Select(rs => rs.RiderId)
+            .ToListAsync(cancellationToken);
+
+        //signal r (when app open)
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
-
+        
         // Push to riders whose app is backgrounded/closed — fire-and-forget so it never delays the response
-        _ = Task.Run(async () =>
+        if(onlineRiderIds.Any())
         {
-            try
-            {
-                var nearbyRiderIds = await _dbContext.RiderStatuses
-                    .Where(rs =>
-                        rs.IsOnline &&
-                        rs.ApprovalStatus == RiderApprovalStatus.Approved &&
-                        rs.RiderId != studentId)
-                    .Select(rs => rs.RiderId)
-                    .ToListAsync(CancellationToken.None);
-
-                if (nearbyRiderIds.Any())
-                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, nearbyRiderIds, CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Background FCM push failed for ride {RideId}", ride.Id);
-            }
-        }, CancellationToken.None);
-
+            _ = Task.Run(async () => {
+                try
+                {
+                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, onlineRiderIds, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to send FCM push for ride {RideId}",
+                        ride.Id);
+                }
+            });
+        }
         return MapSummary(ride);
     }
 
