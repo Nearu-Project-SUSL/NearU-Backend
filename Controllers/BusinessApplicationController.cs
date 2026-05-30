@@ -48,7 +48,7 @@ public class BusinessApplicationController : ControllerBase
     return Ok(
       ApiResponse<object>.SuccessResponse(
         "Application submitted successfully",
-        application.Id
+        application.UserId
       )
       
     );

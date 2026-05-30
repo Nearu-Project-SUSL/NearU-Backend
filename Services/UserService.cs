@@ -86,6 +86,19 @@ namespace NearU_Backend_Revised.Services
 
             await _userRepo.AddUser(user);
 
+            if(user.Role == "Business")
+            {
+                var application = new BusinessApplication
+                {
+                    UserId = user.Id,
+                    BusinessName = user.Username,
+                    Status = "Pending",
+                    SubmittedAt = DateTime.UtcNow
+                };
+                _dbContext.BusinessApplications.Add(application);
+                await _dbContext.SaveChangesAsync();
+            }
+
             // FIX: Initialize RiderStatus immediately upon registration
             if (user.Role == "Rider")
             {

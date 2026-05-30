@@ -2,7 +2,8 @@ namespace NearU_Backend_Revised.Models;
 
 public class BusinessApplication
 {
-    public int Id { get; set; }
+
+    public string Id { get; set; } = Guid.NewGuid().ToString();
 
     public string UserId { get; set; } = string.Empty;
 

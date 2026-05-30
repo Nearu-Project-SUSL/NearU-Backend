@@ -86,6 +86,16 @@ namespace NearU_Backend_Revised.Data
                 entity.HasKey(u => u.Id);
             });
 
+            modelBuilder.Entity<BusinessApplication>(entity =>
+            {
+                entity.HasKey(x => x.UserId);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Configure GiftShop entity
             modelBuilder.Entity<GiftShop>(entity =>
             {
