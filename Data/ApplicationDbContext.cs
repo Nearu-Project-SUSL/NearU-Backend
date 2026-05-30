@@ -15,6 +15,7 @@ namespace NearU_Backend_Revised.Data
 
         // Existing DbSets
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<BusinessApplication> BusinessApplications { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<FoodShop> FoodShops { get; set; } = null!;
         public DbSet<Accommodation> Accommodations { get; set; } = null!;
@@ -31,6 +32,7 @@ namespace NearU_Backend_Revised.Data
 
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
