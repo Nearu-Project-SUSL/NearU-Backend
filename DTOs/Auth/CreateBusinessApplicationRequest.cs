@@ -12,9 +12,4 @@ public class CreateBusinessApplication
 
     public string Address { get; set; } = string.Empty;
 
-    public string Description { get; set; } = string.Empty;
-
-    public string RegistrationNumber { get; set; } = string.Empty;
-
-    public string ApplicationDataJson { get; set; } = "{}";
 }
