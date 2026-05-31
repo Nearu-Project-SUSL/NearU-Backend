@@ -13,6 +13,7 @@ using NearU_Backend_Revised.Data;
 using NearU_Backend_Revised.Enums;
 using Microsoft.AspNetCore.SignalR;
 using NearU_Backend_Revised.Hubs;
+using Microsoft.EntityFrameworkCore;
 
 namespace NearU_Backend_Revised.Services
 {
@@ -442,6 +443,62 @@ namespace NearU_Backend_Revised.Services
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             await _userRepo.UpdateUserAsync(user);
             return true;
+        }
+
+        public async Task<bool> DeleteAccountAsync(string userId, string password)
+        {
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+                throw new Exception("Incorrect password.");
+
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Delete user posted jobs to avoid Restrict constraint violation
+                var userJobs = _dbContext.Jobs.Where(j => j.PostedByUserId == userId);
+                _dbContext.Jobs.RemoveRange(userJobs);
+
+                // 2. Delete user ride requests as a student to avoid Restrict constraint violation
+                var studentRides = _dbContext.RideRequests.Where(r => r.StudentId == userId);
+                _dbContext.RideRequests.RemoveRange(studentRides);
+
+                // 3. For ride requests as a rider, set RiderId to null
+                var riderRides = _dbContext.RideRequests.Where(r => r.RiderId == userId);
+                foreach (var ride in riderRides)
+                {
+                    ride.RiderId = null;
+                }
+
+                // 4. Remove RiderStatus if the user is a rider
+                var riderStatus = await _dbContext.RiderStatuses.FindAsync(userId);
+                if (riderStatus != null)
+                {
+                    _dbContext.RiderStatuses.Remove(riderStatus);
+                }
+
+                // 5. Remove FCM tokens
+                var fcmTokens = _dbContext.UserFcmTokens.Where(t => t.UserId == userId);
+                _dbContext.UserFcmTokens.RemoveRange(fcmTokens);
+
+                // 6. Remove refresh tokens
+                var refreshTokens = _dbContext.RefreshTokens.Where(rt => rt.UserId == userId);
+                _dbContext.RefreshTokens.RemoveRange(refreshTokens);
+
+                // 7. Finally, remove the user
+                _dbContext.Users.Remove(user);
+
+                await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
     }
 }

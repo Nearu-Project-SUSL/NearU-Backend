@@ -126,5 +126,32 @@ namespace NearU_Backend_Revised.Controllers
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
             }
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAccount(string id, [FromBody] DeleteAccountRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+                if (currentUserId != id && role != "Admin" && role != "SuperAdmin")
+                {
+                    return Forbid();
+                }
+
+                if (string.IsNullOrEmpty(request?.Password))
+                {
+                    return BadRequest(ApiResponse<object>.FailResponse("Password is required to delete the account."));
+                }
+
+                await _userService.DeleteAccountAsync(id, request.Password);
+                return Ok(ApiResponse<object>.SuccessResponse("Account deleted successfully", null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
     }
 }
