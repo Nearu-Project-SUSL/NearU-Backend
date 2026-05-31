@@ -88,7 +88,7 @@ namespace NearU_Backend_Revised.Data
 
             modelBuilder.Entity<BusinessApplication>(entity =>
             {
-                entity.HasKey(x => x.UserId);
+                entity.HasKey(x => x.Id);
 
                 entity.HasOne(x => x.User)
                     .WithMany()

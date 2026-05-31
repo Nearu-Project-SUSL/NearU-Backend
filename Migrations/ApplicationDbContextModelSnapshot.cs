@@ -116,14 +116,10 @@ namespace NearU_Backend_Revised.Migrations
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.BusinessApplication", b =>
                 {
-                    b.Property<string>("UserId")
+                    b.Property<string>("Id")
                         .HasColumnType("text");
 
                     b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ApplicationDataJson")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -139,18 +135,11 @@ namespace NearU_Backend_Revised.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
                     b.Property<string>("OwnerName")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("RegistrationNumber")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -161,7 +150,13 @@ namespace NearU_Backend_Revised.Migrations
                     b.Property<DateTime>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.HasKey("UserId");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("BusinessApplications");
                 });
