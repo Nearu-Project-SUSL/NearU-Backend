@@ -150,7 +150,15 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                if (ex.Message == "Incorrect password." || ex.Message == "User not found.")
+                {
+                    return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                }
+
+                // Log the full technical error to standard output (Dozzle logs) for backend developers
+                Console.WriteLine($"[ERROR] Secure Account Deletion failed for User ID {id}: {ex}");
+
+                return BadRequest(ApiResponse<object>.FailResponse("An unexpected database error occurred on the server while deleting your account. Please try again later or contact support."));
             }
         }
     }
