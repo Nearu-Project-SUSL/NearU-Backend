@@ -1,6 +1,0 @@
-@NearU_Backend_Revised_HostAddress = http://localhost:5059
-
-GET {{NearU_Backend_Revised_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
