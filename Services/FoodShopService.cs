@@ -86,6 +86,7 @@ namespace NearU_Backend_Revised.Services
             var shop = new FoodShop
             {
                 Id = Guid.NewGuid().ToString(), //generate a unique id
+                OwnerId = foodShopData.OwnerId,
                 Name = foodShopData.Name,
                 Description = foodShopData.Description,
                 Address = foodShopData.Address,

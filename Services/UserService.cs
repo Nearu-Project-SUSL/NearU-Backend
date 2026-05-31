@@ -86,17 +86,37 @@ namespace NearU_Backend_Revised.Services
 
             await _userRepo.AddUser(user);
 
-            if(user.Role == "Business")
+            if (user.Role == "Business")
             {
+               if (string.IsNullOrWhiteSpace(request.BusinessType) ||
+                string.IsNullOrWhiteSpace(request.BusinessName) ||
+                string.IsNullOrWhiteSpace(request.OwnerName))
+                {
+                    throw new Exception("BusinessType, BusinessName, and OwnerName are required for business registration.");
+                }
+
+                var allowedTypes = new[] { "Food", "Accommodation", "CustomGifts" };
+                if (!allowedTypes.Contains(request.BusinessType, StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new Exception($"BusinessType must be one of: {string.Join(", ", allowedTypes)}");
+                }
+
                 var application = new BusinessApplication
                 {
-                    UserId = user.Id,
-                    BusinessName = user.Username,
-                    Status = "Pending",
-                    SubmittedAt = DateTime.UtcNow
+                    Id           = Guid.NewGuid().ToString(),
+                    UserId       = user.Id,
+                    BusinessType = request.BusinessType,
+                    BusinessName = request.BusinessName,
+                    OwnerName    = request.OwnerName,
+                    Phone        = request.MobileNumber ?? string.Empty,
+                    Address      = request.Address      ?? string.Empty,
+                    Status       = "Pending",
+                    SubmittedAt  = DateTime.UtcNow
                 };
+
                 _dbContext.BusinessApplications.Add(application);
                 await _dbContext.SaveChangesAsync();
+
             }
 
             // FIX: Initialize RiderStatus immediately upon registration
