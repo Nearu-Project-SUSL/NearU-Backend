@@ -21,11 +21,7 @@ public class BusinessApplication
 
     public string Description { get; set; } = string.Empty;
 
-    public string RegistrationNumber { get; set; } = string.Empty;
-
     public string Status { get; set; } = "Pending";
-
-    public string ApplicationDataJson { get; set; } = "{}";
 
     public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
 }
