@@ -23,18 +23,34 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody]RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             try
             {
                 var user = await _userService.Register(request);
-                var data = new { userId = user.Id, username = user.Username }; 
 
-                return Created(string.Empty, ApiResponse<object>.SuccessResponse("User registered successfully", data));
+                object data = user.Role == "Business"
+                    ? new
+                    {
+                        userId   = user.Id,
+                        username = user.Username,
+                        message  = "Registration submitted. Awaiting admin approval."
+                    }
+                    : new
+                    {
+                        userId   = user.Id,
+                        username = user.Username,
+                    };
+
+                var message = user.Role == "Business"
+                    ? "Business registration submitted."
+                    : "User registered successfully";
+
+                return Created(string.Empty, ApiResponse<object>.SuccessResponse(message, data));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message)); 
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
             }
         }
 
