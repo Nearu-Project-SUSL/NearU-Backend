@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780239650337,
+  "lastUpdate": 1780252473845,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -1710,6 +1710,60 @@ window.BENCHMARK_DATA = {
             "value": 399.2388229370117,
             "unit": "ns",
             "range": "± 5.630455036575303"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ec19286d543f12cc783d20213bd0135eb4d753db",
+          "message": "Merge pull request #170 from Nearu-Project-SUSL/NU-38-Rides-Mobility\n\nFix account deletion issue",
+          "timestamp": "2026-06-01T00:03:30+05:30",
+          "tree_id": "90deaca687f9dcf556fa42187c75a3e0b33c5237",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/ec19286d543f12cc783d20213bd0135eb4d753db"
+        },
+        "date": 1780252473539,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7079.1454518636065,
+            "unit": "ns",
+            "range": "± 54.237939711454004"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165587666.44444445,
+            "unit": "ns",
+            "range": "± 8601.427674359278"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 11328.227310180664,
+            "unit": "ns",
+            "range": "± 80.20483095341619"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1294.309590657552,
+            "unit": "ns",
+            "range": "± 3.4849048568631336"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 400.89777127901715,
+            "unit": "ns",
+            "range": "± 0.8697361821011631"
           }
         ]
       }
