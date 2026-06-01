@@ -34,5 +34,9 @@ namespace NearU_Backend_Revised.DTOs.Auth
         public string? Address { get; set; }
         public string? City { get; set; }
         public string? DateOfBirth { get; set; }
+        public string? BusinessType  { get; set; }
+        public string? BusinessName  { get; set; }
+        public string? OwnerName     { get; set; }
+        public string? Description   { get; set; }
     }
 }
