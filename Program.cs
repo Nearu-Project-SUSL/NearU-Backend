@@ -15,6 +15,7 @@ using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,7 +100,10 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
         ),
-        ClockSkew = TimeSpan.FromMinutes(5)
+        ClockSkew = TimeSpan.FromMinutes(5),
+
+        RoleClaimType = ClaimTypes.Role,       
+        NameClaimType = ClaimTypes.NameIdentifier  
     };
 
     // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
@@ -268,6 +272,8 @@ if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(fire
     }
 #pragma warning restore CS0618
 }
+
+
 
 
 var app = builder.Build();
