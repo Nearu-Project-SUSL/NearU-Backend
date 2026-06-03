@@ -25,7 +25,7 @@ services:
   # Map data must be pre-processed on the VPS before first run — see README.
   # Pre-processed files live in /etc/nearu/osrm/ on the host.
   nearu-osrm:
-    image: ghcr.io/project-osrm/osrm-backend:latest
+    image: ghcr.io/project-osrm/osrm-backend@sha256:8430397015356b10f4259d06f927c07b9b5bc3332ff86d3e4ae8b83656313db3
     container_name: nearu-osrm
     restart: always
     command: osrm-routed --algorithm mld /data/sri-lanka-latest.osrm --max-table-size 1000
