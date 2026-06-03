@@ -7,6 +7,7 @@ using NetTopologySuite.Geometries;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Constants;
 using NearU_Backend_Revised.Data;
+using NearU_Backend_Revised.DTOs.Cache;
 using NearU_Backend_Revised.DTOs.Ride;
 using NearU_Backend_Revised.Enums;
 using NearU_Backend_Revised.Models;
@@ -23,6 +24,11 @@ public class RideService : IRideService
     private readonly IOsrmService _osrm;
     private readonly GeometryFactory _geometryFactory;
     private readonly ILogger<RideService> _logger;
+    private readonly ICacheService _cache;
+
+    // Rider status is updated infrequently but read on every heartbeat tick
+    private static readonly TimeSpan RiderStatusCacheTtl = TimeSpan.FromSeconds(30);
+    private static string RiderStatusCacheKey(string riderId) => $"nearu:riderstatus:{riderId}";
 
     public RideService(
         ApplicationDbContext dbContext,
@@ -30,7 +36,8 @@ public class RideService : IRideService
         IRideStateMachine stateMachine,
         IRideNotificationService rideNotificationService,
         IOsrmService osrm,
-        ILogger<RideService> logger)
+        ILogger<RideService> logger,
+        ICacheService cache)
     {
         _dbContext = dbContext;
         _rideSettings = rideSettings.Value;
@@ -38,6 +45,7 @@ public class RideService : IRideService
         _rideNotificationService = rideNotificationService;
         _osrm = osrm;
         _logger = logger;
+        _cache = cache;
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
     }
 
@@ -314,6 +322,19 @@ public class RideService : IRideService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Write-through: update the cache immediately so the next heartbeat read is never stale.
+        // This is more efficient than Remove (which would trigger a DB fetch on the next tick).
+        var cached = new CachedRiderStatus
+        {
+            RiderId        = riderStatus.RiderId,
+            IsOnline       = riderStatus.IsOnline,
+            Longitude      = riderStatus.LastLocation?.X,
+            Latitude       = riderStatus.LastLocation?.Y,
+            LastSeen       = riderStatus.LastSeen,
+            ApprovalStatus = riderStatus.ApprovalStatus.ToString()
+        };
+        await _cache.SetAsync(RiderStatusCacheKey(riderId), cached, RiderStatusCacheTtl);
     }
 
     public async Task<RiderStatus?> GetRiderStatusAsync(string riderId, CancellationToken cancellationToken = default)
@@ -360,11 +381,42 @@ public class RideService : IRideService
         ride.LastHeartbeatAt = now;
         ride.UpdatedAt = now;
 
-        var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        // Try to get the RiderStatus from cache (AOT-safe CachedRiderStatus DTO) to
+        // avoid a DB round-trip on every heartbeat tick (hot path).
+        var cacheKey    = RiderStatusCacheKey(riderId);
+        var cachedStatus = await _cache.GetAsync<CachedRiderStatus>(cacheKey);
+
+        // Always fetch the EF entity so EF can track changes for the DB write.
+        // The cache is used only to skip a separate DB read when we just need to
+        // validate IsOnline / ApprovalStatus.
+        RiderStatus? riderStatus;
+        if (cachedStatus != null)
+        {
+            // EF entity needed for SaveChangesAsync — fetch it (it may already be tracked)
+            riderStatus = _dbContext.RiderStatuses.Local.FirstOrDefault(rs => rs.RiderId == riderId)
+                ?? await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        }
+        else
+        {
+            riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        }
+
         if (riderStatus != null)
         {
             riderStatus.LastLocation = point;
-            riderStatus.LastSeen = now;
+            riderStatus.LastSeen     = now;
+
+            // Write-through: push the updated slim DTO back to Redis immediately.
+            var newCached = new CachedRiderStatus
+            {
+                RiderId        = riderStatus.RiderId,
+                IsOnline       = riderStatus.IsOnline,
+                Longitude      = point.X,
+                Latitude       = point.Y,
+                LastSeen       = now,
+                ApprovalStatus = riderStatus.ApprovalStatus.ToString()
+            };
+            await _cache.SetAsync(cacheKey, newCached, RiderStatusCacheTtl);
         }
 
         _dbContext.TrackingLogs.Add(new TrackingLog
