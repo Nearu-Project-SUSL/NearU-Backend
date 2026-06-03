@@ -142,4 +142,11 @@ jobs:
               echo "❌ Deployment failed: nearu-api container crashed on startup!"
               exit 1
             fi
+            echo "🔄 Restarting nginx to re-resolve new container IPs..."
+            docker restart nearu-nginx
+            sleep 3
+            if [ "$(docker inspect -f '{{.State.Status}}' nearu-nginx)" != "running" ]; then
+              echo "❌ Nginx failed to restart!"
+              exit 1
+            fi
             echo "✅ Deployment complete and verified at $(date)"
