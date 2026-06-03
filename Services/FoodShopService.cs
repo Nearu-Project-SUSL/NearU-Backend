@@ -3,6 +3,8 @@ using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Enums;
+using NearU_Backend_Revised.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace NearU_Backend_Revised.Services
 {
@@ -10,11 +12,13 @@ namespace NearU_Backend_Revised.Services
     {
         private readonly IFoodShopRepository _repository;
         private readonly IImageService _imageService;
+        private readonly ApplicationDbContext _dbContext;
 
-        public FoodShopService(IFoodShopRepository repository, IImageService imageService)
+        public FoodShopService(IFoodShopRepository repository, IImageService imageService, ApplicationDbContext dbContext)
         {
             _repository = repository;
             _imageService = imageService;
+            _dbContext = dbContext;
         }
 
         public async Task<PagedResponse<FoodShopResponse>> GetAllShopsAsync(
@@ -23,31 +27,36 @@ namespace NearU_Backend_Revised.Services
             string? category, 
             string? search)
         {
-            var allshops = await _repository.GetAllAsync(); // get all from repo
+            var allshops = await _repository.GetAllAsync();
             
-            //apply category filter if provided
-            if(!string.IsNullOrWhiteSpace(category) && category != "All")
-            {
+            //get approved owner ids
+            var approvedOwnerIds = await _dbContext.BusinessApplications
+                .Where(a => a.Status == "Approved")
+                .Select(a => a.UserId)
+                .ToListAsync();
+
+            //show shop if approved or admin created
+            allshops = allshops.Where(s =>
+                s.OwnerId == null ||
+                approvedOwnerIds.Contains(s.OwnerId)
+            );
+
+            // apply category filter
+            if (!string.IsNullOrWhiteSpace(category) && category != "All")
                 allshops = allshops.Where(s => s.Category == category);
-            }
 
-            //apply search filter if provided
-            // StringComparison.OrdinalIgnoreCase = case insensitive
-            if(!string.IsNullOrWhiteSpace(search))
-            {
+            // apply search filter
+            if (!string.IsNullOrWhiteSpace(search))
                 allshops = allshops.Where(s =>
-                s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                (s.Description != null && s.Description.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    (s.Description != null && s.Description.Contains(search, StringComparison.OrdinalIgnoreCase))
                 );
-            }
 
-            var totalCount = allshops.Count(); //count after filter
-
+            var totalCount = allshops.Count();
             var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
 
-            //apply pagination - skip items from previous page
             var pagedShops = allshops
-                .Skip((page-1) * pageSize)
+                .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(shop => MapToResponse(shop));
 
