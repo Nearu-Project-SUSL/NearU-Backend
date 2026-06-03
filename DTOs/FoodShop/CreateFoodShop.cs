@@ -16,5 +16,7 @@ namespace NearU_Backend_Revised.DTOs.FoodShop
 		public IFormFile? Photo { get; set; }
 
 		public string? Category { get; set; }
+		[System.Text.Json.Serialization.JsonIgnore]
+		public string? OwnerId {get; set;}
     }
 }
