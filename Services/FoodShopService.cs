@@ -3,6 +3,8 @@ using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Enums;
+using NearU_Backend_Revised.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace NearU_Backend_Revised.Services
 {
@@ -21,6 +23,13 @@ namespace NearU_Backend_Revised.Services
             _repository = repository;
             _imageService = imageService;
             _cache = cache;
+        private readonly ApplicationDbContext _dbContext;
+
+        public FoodShopService(IFoodShopRepository repository, IImageService imageService, ApplicationDbContext dbContext)
+        {
+            _repository = repository;
+            _imageService = imageService;
+            _dbContext = dbContext;
         }
 
         public async Task<PagedResponse<FoodShopResponse>> GetAllShopsAsync(
@@ -58,6 +67,38 @@ namespace NearU_Backend_Revised.Services
             var pagedShops = filteredList
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize);
+            var allshops = await _repository.GetAllAsync();
+            
+            //get approved owner ids
+            var approvedOwnerIds = await _dbContext.BusinessApplications
+                .Where(a => a.Status == "Approved")
+                .Select(a => a.UserId)
+                .ToListAsync();
+
+            //show shop if approved or admin created
+            allshops = allshops.Where(s =>
+                s.OwnerId == null ||
+                approvedOwnerIds.Contains(s.OwnerId)
+            );
+
+            // apply category filter
+            if (!string.IsNullOrWhiteSpace(category) && category != "All")
+                allshops = allshops.Where(s => s.Category == category);
+
+            // apply search filter
+            if (!string.IsNullOrWhiteSpace(search))
+                allshops = allshops.Where(s =>
+                    s.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    (s.Description != null && s.Description.Contains(search, StringComparison.OrdinalIgnoreCase))
+                );
+
+            var totalCount = allshops.Count();
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            var pagedShops = allshops
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(shop => MapToResponse(shop));
 
             return new PagedResponse<FoodShopResponse>
             {
@@ -153,6 +194,7 @@ namespace NearU_Backend_Revised.Services
             return new FoodShopResponse
             {
                 Id = shop.Id,
+                OwnerId = shop.OwnerId,
                 Name = shop.Name,
                 Description = shop.Description,
                 Address = shop.Address,
