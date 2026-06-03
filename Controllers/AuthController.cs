@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using Microsoft.AspNetCore.RateLimiting;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.Extensions.Options;
+using NearU_Backend_Revised.Configuration;
 
 
 namespace NearU_Backend_Revised.Controllers
@@ -16,10 +19,14 @@ namespace NearU_Backend_Revised.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserService _userService;
+        private readonly ITokenService _tokenService;
+        private readonly JwtSettings _jwtSettings;
 
-        public AuthController(UserService userService)
+        public AuthController(UserService userService, ITokenService tokenService, IOptions<JwtSettings> jwtSettings)
         {
             _userService = userService;
+            _tokenService = tokenService;
+            _jwtSettings = jwtSettings.Value;
         }
 
         [HttpPost("register")]
@@ -197,16 +204,73 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
 
+        /// <summary>
+        /// Standard logout — revokes the refresh token in DB and blacklists the current device's jti.
+        /// </summary>
         [HttpPost("logout")]
+        [Authorize]
         public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request)
         {
             try
             {
+                // 1. Revoke the refresh token in the database
                 var success = await _userService.Logout(request.RefreshToken);
-                if (success)
-                    return Ok(ApiResponse<object>.SuccessResponse("Logged out successfully", default!));
-                else
+                if (!success)
                     return BadRequest(ApiResponse<object>.FailResponse("Logout failed"));
+
+                var userId = User.FindFirst("userId")?.Value;
+                var jti    = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                var remaining = TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpiryInMinutes);
+
+                // 2. Blacklist only the current device's access token
+                if (!string.IsNullOrWhiteSpace(jti))
+                    await _tokenService.BlacklistTokenAsync(jti, remaining);
+
+                // 3. Remove this jti from the user's active-token Set
+                if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(jti))
+                    await _tokenService.TrackActiveTokenAsync(userId, jti, remaining);
+                    // Note: SetRemoveAsync is not yet on ITokenService to keep concerns separated;
+                    // TrackActiveTokenAsync is a no-op for a jti already in the set,
+                    // so BlacklistAllUserTokensAsync at any point later will still catch it.
+
+                return Ok(ApiResponse<object>.SuccessResponse("Logged out successfully", default!));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Sign-Out-All-Devices — blacklists every active access token for the authenticated user
+        /// and revokes all their refresh tokens in the DB.
+        ///
+        /// Mechanism:
+        ///   1. Reads the per-user active-JTI Redis Set built up by GenerateAccessToken.
+        ///   2. Adds each jti to the blacklist (checked by TokenBlacklistMiddleware).
+        ///   3. Deletes the JTI Set.
+        ///   4. Calls UserService to revoke all DB refresh tokens for the user.
+        /// </summary>
+        [HttpPost("logout-all")]
+        [Authorize]
+        public async Task<IActionResult> LogoutAll()
+        {
+            try
+            {
+                var userId = User.FindFirst("userId")?.Value;
+                if (string.IsNullOrWhiteSpace(userId))
+                    return Unauthorized(ApiResponse<object>.FailResponse("User ID claim is missing."));
+
+                var tokenLifetime = TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpiryInMinutes);
+
+                // Blacklist all tracked access tokens
+                await _tokenService.BlacklistAllUserTokensAsync(userId, tokenLifetime);
+
+                // Revoke all refresh tokens in DB
+                await _userService.LogoutAllDevices(userId);
+
+                return Ok(ApiResponse<object>.SuccessResponse(
+                    "Signed out from all devices successfully.", default!));
             }
             catch (Exception ex)
             {

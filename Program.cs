@@ -15,6 +15,8 @@ using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Middleware;
+using AspNetCoreRateLimit;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -59,7 +61,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add Rate Limiting for Login
+// Add Rate Limiting for Login (in-process fallback, AspNetCoreRateLimit handles distributed below)
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -71,6 +73,18 @@ builder.Services.AddRateLimiter(options =>
         options.QueueLimit = 0;
     });
 });
+
+// ── AspNetCoreRateLimit — distributed rate limiting backed by Redis IDistributedCache ─────────
+// Reads rules from appsettings.json [IpRateLimiting] section.
+// Counters are stored in IDistributedCache (Redis in production, MemoryCache in dev).
+builder.Services.AddMemoryCache(); // required by AspNetCoreRateLimit internals
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+builder.Services.AddInMemoryRateLimiting();
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 
 // Register JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
@@ -258,6 +272,11 @@ else
     builder.Services.AddSignalR();
 }
 
+// Register the CacheService AFTER AddStackExchangeRedisCache / AddDistributedMemoryCache
+// so IDistributedCache is already in the container.
+builder.Services.AddSingleton<ICacheService, CacheService>();
+
+
 // Firebase Admin Setup
 var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
 if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(firebaseCredentialsPath))
@@ -359,8 +378,13 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.UseRouting();
 
 app.UseCors("AllowFrontend");
+// Distributed IP rate limiting (AspNetCoreRateLimit — Redis-backed in production)
+app.UseIpRateLimiting();
 app.UseRateLimiter();
 app.UseAuthentication();
+// Token blacklist check — runs after UseAuthentication so ClaimsPrincipal is populated.
+// Rejects requests whose JWT jti is in the Redis blacklist (e.g. after logout).
+app.UseMiddleware<TokenBlacklistMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<RidesHub>("/hubs/rides", options =>
