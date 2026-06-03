@@ -135,6 +135,7 @@ namespace NearU_Backend_Revised.Services
             return new FoodShopResponse
             {
                 Id = shop.Id,
+                OwnerId = shop.OwnerId,
                 Name = shop.Name,
                 Description = shop.Description,
                 Address = shop.Address,
