@@ -85,11 +85,11 @@ public class RideService : IRideService
         var pickup = CreatePoint(request.PickupLongitude, request.PickupLatitude);
         var dropoff = CreatePoint(request.DropoffLongitude, request.DropoffLatitude);
 
-        var pickupInside  = IsWithinFacultyRadius(pickup);
-        var dropoffInside = IsWithinFacultyRadius(dropoff);
+        var pickupInside  = IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters);
+        var dropoffInside = IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters);
         if (!pickupInside || !dropoffInside)
         {
-            throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
+            throw new InvalidOperationException($"Pickup and drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
         }
 
         // Use OSRM for true road-network distance (falls back to Haversine on failure)
@@ -127,32 +127,33 @@ public class RideService : IRideService
         _dbContext.RideRequests.Add(ride);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // Notify online riders via SignalR (app is open)
+        // 1. Notify online riders via SignalR (app is open and in OnlineRiders group)
+        await _rideNotificationService.NotifyNewRideToOnlineRidersAsync(ride, cancellationToken);
+
+        // 2. Also notify via the ride channel in case anyone is already subscribed
+        await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        // 3. Push FCM to riders whose app is backgrounded/closed — fire-and-forget
         var onlineRiderIds = await _dbContext.RiderStatuses
             .Where(rs => rs.IsOnline)
             .Select(rs => rs.RiderId)
             .ToListAsync(cancellationToken);
 
-        //signal r (when app open)
-        await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
-        
-        // Push to riders whose app is backgrounded/closed — fire-and-forget so it never delays the response
-        if(onlineRiderIds.Any())
+        if (onlineRiderIds.Any())
         {
-            _ = Task.Run(async () => {
+            _ = Task.Run(async () =>
+            {
                 try
                 {
                     await _rideNotificationService.SendNewRideRequestPushAsync(ride, onlineRiderIds, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(
-                        ex,
-                        "Failed to send FCM push for ride {RideId}",
-                        ride.Id);
+                    _logger.LogError(ex, "Failed to send FCM push for ride {RideId}", ride.Id);
                 }
             });
         }
+
         return MapSummary(ride);
     }
 
@@ -186,7 +187,26 @@ public class RideService : IRideService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+
+        // SignalR — notify both participants
         await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
+
+        // FCM push to student — they may have their app closed
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _rideNotificationService.SendRideStatusPushToStudentAsync(
+                    lockedRide,
+                    title: "Rider Accepted Your Request 🛵",
+                    body:  "Your rider is on the way. Track them in the app!",
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "FCM push to student failed for ride {RideId}", lockedRide.Id);
+            }
+        });
 
         return MapSummary(lockedRide);
     }
@@ -201,6 +221,23 @@ public class RideService : IRideService
         ride.UpdatedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        // FCM push to student — rider has arrived at pickup
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _rideNotificationService.SendRideStatusPushToStudentAsync(
+                    ride,
+                    title: "Your Rider Has Arrived! 📍",
+                    body:  "Your rider is waiting at the pickup location.",
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "FCM push to student failed for ride {RideId}", ride.Id);
+            }
+        });
 
         return MapSummary(ride);
     }
@@ -294,6 +331,27 @@ public class RideService : IRideService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        // FCM push to rider if one was assigned — they need to know the ride is cancelled
+        if (!string.IsNullOrWhiteSpace(ride.RiderId))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _rideNotificationService.SendRideStatusPushToRiderAsync(
+                        ride,
+                        title: "Ride Cancelled ❌",
+                        body:  "The student has cancelled the ride request.",
+                        CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "FCM push to rider failed for ride {RideId}", ride.Id);
+                }
+            });
+        }
+
         return MapSummary(ride);
     }
 
@@ -435,7 +493,13 @@ public class RideService : IRideService
             cancellationToken);
 
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
-        await _rideNotificationService.BroadcastLocationAsync(ride.Id, point.Y, point.X, (decimal)distanceToPickup, cancellationToken);
+        await _rideNotificationService.BroadcastLocationAsync(
+            ride.Id,
+            ride.StudentId,
+            point.Y,
+            point.X,
+            (decimal)distanceToPickup,
+            cancellationToken);
     }
 
     public async Task<RideLocationResponseDto> GetLiveLocationAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
@@ -502,9 +566,9 @@ public class RideService : IRideService
         var pickup = CreatePoint(pickupLng, pickupLat);
         var dropoff = CreatePoint(dropoffLng, dropoffLat);
 
-        if (!IsWithinFacultyRadius(pickup) || !IsWithinFacultyRadius(dropoff))
+        if (!IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters) || !IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters))
         {
-            throw new InvalidOperationException("Pickup and drop-off points must be within the 5 km operational boundary.");
+            throw new InvalidOperationException($"Pickup and drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
         }
 
         // Use OSRM for true road-network distance (falls back to Haversine on failure)
@@ -597,8 +661,25 @@ public class RideService : IRideService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // Notify about the state change to student (ask if the ride is complete)
+        // Notify about the state change — student sees this and is prompted to confirm
         await _rideNotificationService.NotifyStateChangeAsync(ride, cancellationToken);
+
+        // FCM push to student — they may have the app closed
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _rideNotificationService.SendRideStatusPushToStudentAsync(
+                    ride,
+                    title: "Trip Complete — Please Confirm ✅",
+                    body:  "Your rider has marked the trip complete. Open the app to confirm.",
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "FCM push to student failed for ride {RideId}", ride.Id);
+            }
+        });
 
         return MapSummary(ride);
     }
@@ -664,6 +745,23 @@ public class RideService : IRideService
         };
     }
 
+    /// <summary>
+    /// Polling fallback — returns the current state of a specific ride.
+    /// Only succeeds if the caller is the student or the assigned rider.
+    /// </summary>
+    public async Task<RideSummaryDto?> GetRideStatusAsync(string userId, string rideId, CancellationToken cancellationToken = default)
+    {
+        var ride = await _dbContext.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
+
+        if (ride is null) return null;
+
+        // Only the student or the assigned rider may query this ride
+        if (ride.StudentId != userId && ride.RiderId != userId) return null;
+
+        return MapSummary(ride);
+    }
+
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
         var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
@@ -707,7 +805,7 @@ public class RideService : IRideService
         return _geometryFactory.CreatePoint(new Coordinate(longitude, latitude));
     }
 
-    private static bool IsWithinFacultyRadius(Point point)
+    private static bool IsWithinFacultyRadius(Point point, int allowedRadiusMeters)
     {
         const double R = 6371000;
         var dLat = ToRadians(RideConstants.FacultyCentroidLat - point.Y);
@@ -716,7 +814,7 @@ public class RideService : IRideService
             + Math.Cos(ToRadians(point.Y)) * Math.Cos(ToRadians(RideConstants.FacultyCentroidLat))
             * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
         var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        return R * c <= RideConstants.AllowedRadiusMeters;
+        return R * c <= allowedRadiusMeters;
     }
     private static void AddParameter(IDbCommand command, string name, object value)
     {
