@@ -142,6 +142,29 @@ public class RideController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// GET /api/rides/{rideId}/status — polling fallback for the current state of a specific ride.
+    /// Used by the frontend when SignalR is unavailable or as a reconciliation check.
+    /// Both the student and the assigned rider can call this.
+    /// </summary>
+    [HttpGet("rides/{rideId}/status")]
+    [Authorize]
+    public async Task<IActionResult> GetRideStatus(string rideId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            var ride = await _rideService.GetRideStatusAsync(userId, rideId, cancellationToken);
+            if (ride is null)
+                return NotFound(ApiResponse<object>.FailResponse("Ride not found or you are not a participant."));
+            return Ok(ApiResponse<RideSummaryDto>.SuccessResponse("Ride status fetched.", ride));
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
+    }
+
     // ─── Ride Requests ───────────────────────────────────────────────────────────
 
     [HttpPost("requests")]
