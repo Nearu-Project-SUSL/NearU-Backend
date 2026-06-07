@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780636486621,
+  "lastUpdate": 1780813493894,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -2034,6 +2034,58 @@ window.BENCHMARK_DATA = {
             "value": 391.78737847010296,
             "unit": "ns",
             "range": "± 1.8968811255643625"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011",
+            "email": "tnirajaya2001@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "2856415ff6b4e1727547e0f869cb6e73aa1da60a",
+          "message": "Merge pull request #178 from Nearu-Project-SUSL/NU-38-Rides-Mobility\n\nfeat: implement ride service orchestration with state management",
+          "timestamp": "2026-06-05T05:13:38Z",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/2856415ff6b4e1727547e0f869cb6e73aa1da60a"
+        },
+        "date": 1780813493561,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7211.719004313151,
+            "unit": "ns",
+            "range": "± 93.75189034349434"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165478848.75,
+            "unit": "ns",
+            "range": "± 16135.757343939576"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 11620.162150065104,
+            "unit": "ns",
+            "range": "± 68.16212913781357"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1380.9766902923584,
+            "unit": "ns",
+            "range": "± 29.193566205977074"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 402.39708916346234,
+            "unit": "ns",
+            "range": "± 3.0448448633346796"
           }
         ]
       }
