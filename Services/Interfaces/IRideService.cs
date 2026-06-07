@@ -23,4 +23,11 @@ public interface IRideService
     Task<RideSummaryDto> RiderCompleteAsync(string riderId, string rideId, CancellationToken cancellationToken = default);
     Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default);
     Task<object> GetRiderStatsAsync(string riderId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the current state of a specific ride.
+    /// Returns null if the ride does not exist or the caller is not a participant.
+    /// Used as a polling fallback when SignalR is unavailable.
+    /// </summary>
+    Task<RideSummaryDto?> GetRideStatusAsync(string userId, string rideId, CancellationToken cancellationToken = default);
 }

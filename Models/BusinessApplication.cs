@@ -1,0 +1,27 @@
+namespace NearU_Backend_Revised.Models;
+
+public class BusinessApplication
+{
+
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    public string UserId { get; set; } = string.Empty;
+
+    public User User { get; set; } = null!;
+
+    public string BusinessType { get; set; } = string.Empty;
+
+    public string BusinessName { get; set; } = string.Empty;
+
+    public string OwnerName { get; set; } = string.Empty;
+
+    public string Phone { get; set; } = string.Empty;
+
+    public string Address { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public string Status { get; set; } = "Pending";
+
+    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+}

@@ -17,11 +17,20 @@ namespace NearU_Backend_Revised.Services
     {
         private readonly JwtSettings _jwtSettings;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly Interfaces.ICacheService _cache;
 
-        public TokenService(IOptions<JwtSettings> jwtSettings, IRefreshTokenRepository refreshTokenRepository)
+        private const string BlacklistKeyPrefix  = "nearu:jti:blacklist:";
+        // Key pattern for the per-user active-JTI Set: nearu:user:jtis:{userId}:set
+        private const string UserJtiSetKeyPrefix = "nearu:user:jtis:";
+
+        public TokenService(
+            IOptions<JwtSettings> jwtSettings,
+            IRefreshTokenRepository refreshTokenRepository,
+            Interfaces.ICacheService cache)
         {
             _jwtSettings = jwtSettings.Value;
             _refreshTokenRepository = refreshTokenRepository;
+            _cache = cache;
         }
 
         /// <summary>
@@ -61,8 +70,15 @@ namespace NearU_Backend_Revised.Services
             // Generate the token
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
+            var tokenString = tokenHandler.WriteToken(token);
 
-            return tokenHandler.WriteToken(token);
+            // Track this jti in the user's active-JTI set (best-effort, fire-and-forget)
+            var jti = token.Id; // same Guid added to claims above
+            var tokenLifetime = TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpiryInMinutes);
+            // Do NOT await — GenerateAccessToken is synchronous; tracking failure must not block the caller.
+            _ = _cache.SetAddAsync(UserJtiSetKeyPrefix + user.Id, jti, tokenLifetime);
+
+            return tokenString;
         }
 
         /// <summary>
@@ -207,6 +223,55 @@ namespace NearU_Backend_Revised.Services
             var replacedToken = await _refreshTokenRepository.ReplaceRefreshTokenAsync(oldToken, newRefreshToken);
 
             return replacedToken;
+        }
+        /// <summary>Blacklists the given jti in Redis so the token cannot be reused.</summary>
+        public async Task BlacklistTokenAsync(string jti, TimeSpan remaining)
+        {
+            if (string.IsNullOrWhiteSpace(jti)) return;
+            // Store a sentinel value — the key existence is the only thing checked.
+            await _cache.SetAsync($"{BlacklistKeyPrefix}{jti}", "revoked", remaining);
+            // Also remove from the user's active-JTI set. We don't know the userId here
+            // so the set clean-up happens on the caller side (AuthController).
+        }
+
+        /// <summary>Returns true if the jti is on the Redis blacklist.</summary>
+        public async Task<bool> IsTokenBlacklistedAsync(string jti)
+        {
+            if (string.IsNullOrWhiteSpace(jti)) return false;
+            return await _cache.ExistsAsync($"{BlacklistKeyPrefix}{jti}");
+        }
+
+        // ── Sign-Out-All-Devices ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Records the newly issued jti in the user's active-JTI Set.
+        /// Called automatically from <see cref="GenerateAccessToken"/> (fire-and-forget).
+        /// </summary>
+        public async Task TrackActiveTokenAsync(string userId, string jti, TimeSpan tokenLifetime)
+        {
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(jti)) return;
+            // TTL of the set = token lifetime so it self-expires when no tokens are active.
+            await _cache.SetAddAsync(UserJtiSetKeyPrefix + userId, jti, tokenLifetime);
+        }
+
+        /// <summary>
+        /// Sign-Out-All-Devices: reads every tracked jti for <paramref name="userId"/>,
+        /// blacklists each one, then removes the Set.
+        /// </summary>
+        public async Task BlacklistAllUserTokensAsync(string userId, TimeSpan tokenLifetime)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return;
+
+            var setKey = UserJtiSetKeyPrefix + userId;
+            var jtis = await _cache.SetMembersAsync(setKey);
+
+            var tasks = jtis.Select(jti =>
+                _cache.SetAsync($"{BlacklistKeyPrefix}{jti}", "revoked", tokenLifetime));
+
+            await Task.WhenAll(tasks);
+
+            // Wipe the entire Set so it cannot be iterated again
+            await _cache.RemoveAsync($"{setKey}:set");
         }
     }
 }

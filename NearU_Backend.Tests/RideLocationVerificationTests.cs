@@ -18,9 +18,11 @@ public class RideLocationVerificationTests
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly RideService _rideService;
-    private readonly Mock<IRideStateMachine> _stateMachineMock = new();
-    private readonly Mock<IRideNotificationService> _notificationServiceMock = new();
-    private readonly Mock<ILogger<RideService>> _loggerMock = new();
+    private readonly Mock<IRideStateMachine>         _stateMachineMock       = new();
+    private readonly Mock<IRideNotificationService>  _notificationServiceMock= new();
+    private readonly Mock<IOsrmService>              _osrmServiceMock        = new();
+    private readonly Mock<ILogger<RideService>>      _loggerMock             = new();
+    private readonly Mock<ICacheService>             _cacheMock              = new();
 
     public RideLocationVerificationTests()
     {
@@ -35,12 +37,41 @@ public class RideLocationVerificationTests
             RatePerKm = 20
         });
 
+        // Return a fixed road distance so tests are deterministic
+        // and never make real HTTP calls to OSRM.
+        _osrmServiceMock
+            .Setup(s => s.GetRoadDistanceKmAsync(
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1.5);
+
+        _osrmServiceMock
+            .Setup(s => s.GetRouteAsync(
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<double>(), It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((1.5, 300.0));
+
+        // Stub cache calls so tests are Redis-independent
+        _cacheMock
+            .Setup(c => c.GetAsync<NearU_Backend_Revised.DTOs.Cache.CachedRiderStatus>(It.IsAny<string>()))
+            .ReturnsAsync((NearU_Backend_Revised.DTOs.Cache.CachedRiderStatus?)null);
+        _cacheMock
+            .Setup(c => c.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<NearU_Backend_Revised.DTOs.Cache.CachedRiderStatus>(),
+                It.IsAny<TimeSpan?>()))
+            .Returns(Task.CompletedTask);
+
         _rideService = new RideService(
             _dbContext,
             rideSettings,
             _stateMachineMock.Object,
             _notificationServiceMock.Object,
-            _loggerMock.Object);
+            _osrmServiceMock.Object,
+            _loggerMock.Object,
+            _cacheMock.Object);
     }
 
     [Fact]
@@ -76,6 +107,7 @@ public class RideLocationVerificationTests
         // Assert
         Assert.Null(exception);
         var updatedRiderStatus = await _dbContext.RiderStatuses.FindAsync(riderId);
+        Assert.NotNull(updatedRiderStatus);                          // guard: FindAsync can return null
         Assert.NotNull(updatedRiderStatus.LastLocation);
         Assert.Equal(6.7150, updatedRiderStatus.LastLocation.Y);
     }
