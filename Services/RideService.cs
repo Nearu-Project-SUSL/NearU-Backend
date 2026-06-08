@@ -159,56 +159,42 @@ public class RideService : IRideService
 
     public async Task<RideSummaryDto> AcceptAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
     {
-        var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        var riderStatus = await _dbContext.RiderStatuses
+            .FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
         if (riderStatus == null || !riderStatus.IsOnline || riderStatus.ApprovalStatus != RiderApprovalStatus.Approved)
-        {
             throw new InvalidOperationException("Only approved online riders can accept requests.");
-        }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-        var lockedRide = await _dbContext.RideRequests
-            .FromSqlInterpolated($@"SELECT * FROM ""RideRequests"" WHERE ""Id"" = {rideId} FOR UPDATE")
-            .SingleOrDefaultAsync(cancellationToken);
+        // Wrap transaction in execution strategy to work with NpgsqlRetryingExecutionStrategy
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
 
-        if (lockedRide == null)
+        return await strategy.ExecuteAsync(async () =>
         {
-            throw new InvalidOperationException("Ride request not found.");
-        }
+            await using var transaction = await _dbContext.Database
+                .BeginTransactionAsync(cancellationToken);
 
-        _stateMachine.EnsureTransition(lockedRide.Status, RideRequestStatus.Accepted);
+            var lockedRide = await _dbContext.RideRequests
+                .FromSqlInterpolated($@"SELECT * FROM ""RideRequests"" WHERE ""Id"" = {rideId} FOR UPDATE")
+                .SingleOrDefaultAsync(cancellationToken);
 
-        lockedRide.RiderId = riderId;
-        lockedRide.Status = RideRequestStatus.Accepted;
-        lockedRide.OTP = GenerateOtp();
-        lockedRide.OtpExpiresAt = DateTime.UtcNow.AddMinutes(RideConstants.OtpExpiryMinutes);
-        lockedRide.OTPAttempts = 0;
-        lockedRide.AcceptedAt = DateTime.UtcNow;
-        lockedRide.UpdatedAt = DateTime.UtcNow;
+            if (lockedRide == null)
+                throw new InvalidOperationException("Ride request not found.");
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+            _stateMachine.EnsureTransition(lockedRide.Status, RideRequestStatus.Accepted);
 
-        // SignalR — notify both participants
-        await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
+            lockedRide.RiderId      = riderId;
+            lockedRide.Status       = RideRequestStatus.Accepted;
+            lockedRide.OTP          = GenerateOtp();
+            lockedRide.OtpExpiresAt = DateTime.UtcNow.AddMinutes(RideConstants.OtpExpiryMinutes);
+            lockedRide.OTPAttempts  = 0;
+            lockedRide.AcceptedAt   = DateTime.UtcNow;
+            lockedRide.UpdatedAt    = DateTime.UtcNow;
 
-        // FCM push to student — they may have their app closed
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await _rideNotificationService.SendRideStatusPushToStudentAsync(
-                    lockedRide,
-                    title: "Rider Accepted Your Request 🛵",
-                    body:  "Your rider is on the way. Track them in the app!",
-                    CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "FCM push to student failed for ride {RideId}", lockedRide.Id);
-            }
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
+
+            return MapSummary(lockedRide);
         });
-
-        return MapSummary(lockedRide);
     }
 
     public async Task<RideSummaryDto> ArriveAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
