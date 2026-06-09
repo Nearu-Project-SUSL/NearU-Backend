@@ -12,6 +12,7 @@ using NearU_Backend_Revised.DTOs.Ride;
 using NearU_Backend_Revised.Enums;
 using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Services.Interfaces;
+using Microsoft.OpenApi;
 
 namespace NearU_Backend_Revised.Services;
 
@@ -25,6 +26,7 @@ public class RideService : IRideService
     private readonly GeometryFactory _geometryFactory;
     private readonly ILogger<RideService> _logger;
     private readonly ICacheService _cache;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     // Rider status is updated infrequently but read on every heartbeat tick
     private static readonly TimeSpan RiderStatusCacheTtl = TimeSpan.FromSeconds(30);
@@ -37,7 +39,8 @@ public class RideService : IRideService
         IRideNotificationService rideNotificationService,
         IOsrmService osrm,
         ILogger<RideService> logger,
-        ICacheService cache)
+        ICacheService cache,
+        IServiceScopeFactory scopeFactory)
     {
         _dbContext = dbContext;
         _rideSettings = rideSettings.Value;
@@ -46,6 +49,7 @@ public class RideService : IRideService
         _osrm = osrm;
         _logger = logger;
         _cache = cache;
+        _scopeFactory = scopeFactory;
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
     }
 
@@ -141,16 +145,29 @@ public class RideService : IRideService
 
         if (onlineRiderIds.Any())
         {
-            _ = Task.Run(async () =>
+            var rideSnapshot = ride;
+            var riderIdList = onlineRiderIds.ToList();
+
+            _= Task.Run(async () =>
             {
-                try
+               try
                 {
-                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, onlineRiderIds, cancellationToken);
+                    using var scope = _scopeFactory.CreateScope();
+
+                    var push = scope.ServiceProvider
+                        .GetRequiredService<IRideNotificationService>();
+
+                    await push.SendNewRideRequestPushAsync(
+                        rideSnapshot,
+                        riderIdList,
+                        CancellationToken.None);
                 }
-                catch (Exception ex)
+                catch(Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send FCM push for ride {RideId}", ride.Id);
-                }
+                    _logger.LogError(ex,
+                        "Failed to send FCM push for ride {RideId}",
+                        rideSnapshot.Id);
+                } 
             });
         }
 
