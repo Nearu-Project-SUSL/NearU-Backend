@@ -11,6 +11,7 @@ using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
 using NetTopologySuite.Geometries;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace NearU_Backend.Tests;
 
@@ -23,6 +24,7 @@ public class RideLocationVerificationTests
     private readonly Mock<IOsrmService>              _osrmServiceMock        = new();
     private readonly Mock<ILogger<RideService>>      _loggerMock             = new();
     private readonly Mock<ICacheService>             _cacheMock              = new();
+    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
 
     public RideLocationVerificationTests()
     {
@@ -71,7 +73,9 @@ public class RideLocationVerificationTests
             _notificationServiceMock.Object,
             _osrmServiceMock.Object,
             _loggerMock.Object,
-            _cacheMock.Object);
+            _cacheMock.Object,
+            _scopeFactoryMock.Object
+            );
     }
 
     [Fact]
