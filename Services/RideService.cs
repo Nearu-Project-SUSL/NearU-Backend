@@ -794,7 +794,8 @@ public class RideService : IRideService
             DropoffLatitude = ride.DropoffLocation?.Y ?? 0,
             DropoffLongitude = ride.DropoffLocation?.X ?? 0,
             CreatedAt = ride.CreatedAt,
-            OtpExpiresAt = ride.OtpExpiresAt
+            OtpExpiresAt = ride.OtpExpiresAt,
+            Otp = ride.OTP
         };
     }
 

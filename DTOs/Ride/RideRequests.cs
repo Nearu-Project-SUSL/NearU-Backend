@@ -71,7 +71,7 @@ public class RideSummaryDto
     public double DropoffLongitude { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? OtpExpiresAt { get; set; }
-}
+    public string? Otp { get; set; }}
 
 public class RideLocationResponseDto
 {

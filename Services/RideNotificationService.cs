@@ -38,7 +38,10 @@ public class RideNotificationService : IRideNotificationService
         {
             rideId      = rideRequest.Id,
             status      = rideRequest.Status.ToString(),
-            updatedAtUtc = rideRequest.UpdatedAt
+            updatedAtUtc = rideRequest.UpdatedAt,
+            otp          = rideRequest.Status.ToString() == "Accepted" ? rideRequest.OTP : null,
+            otpExpiresAt = rideRequest.Status.ToString() == "Accepted" ? rideRequest.OtpExpiresAt : (DateTime?)null,
+
         };
 
         // 1. Broadcast to the ride channel (clients that already called JoinRideChannel)
