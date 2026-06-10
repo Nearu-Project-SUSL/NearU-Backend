@@ -12,6 +12,7 @@ using NearU_Backend_Revised.DTOs.Ride;
 using NearU_Backend_Revised.Enums;
 using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Services.Interfaces;
+using Microsoft.OpenApi;
 
 namespace NearU_Backend_Revised.Services;
 
@@ -25,6 +26,7 @@ public class RideService : IRideService
     private readonly GeometryFactory _geometryFactory;
     private readonly ILogger<RideService> _logger;
     private readonly ICacheService _cache;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     // Rider status is updated infrequently but read on every heartbeat tick
     private static readonly TimeSpan RiderStatusCacheTtl = TimeSpan.FromSeconds(30);
@@ -37,7 +39,8 @@ public class RideService : IRideService
         IRideNotificationService rideNotificationService,
         IOsrmService osrm,
         ILogger<RideService> logger,
-        ICacheService cache)
+        ICacheService cache,
+        IServiceScopeFactory scopeFactory)
     {
         _dbContext = dbContext;
         _rideSettings = rideSettings.Value;
@@ -46,6 +49,7 @@ public class RideService : IRideService
         _osrm = osrm;
         _logger = logger;
         _cache = cache;
+        _scopeFactory = scopeFactory;
         _geometryFactory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
     }
 
@@ -141,16 +145,29 @@ public class RideService : IRideService
 
         if (onlineRiderIds.Any())
         {
-            _ = Task.Run(async () =>
+            var rideSnapshot = ride;
+            var riderIdList = onlineRiderIds.ToList();
+
+            _= Task.Run(async () =>
             {
-                try
+               try
                 {
-                    await _rideNotificationService.SendNewRideRequestPushAsync(ride, onlineRiderIds, cancellationToken);
+                    using var scope = _scopeFactory.CreateScope();
+
+                    var push = scope.ServiceProvider
+                        .GetRequiredService<IRideNotificationService>();
+
+                    await push.SendNewRideRequestPushAsync(
+                        rideSnapshot,
+                        riderIdList,
+                        CancellationToken.None);
                 }
-                catch (Exception ex)
+                catch(Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to send FCM push for ride {RideId}", ride.Id);
-                }
+                    _logger.LogError(ex,
+                        "Failed to send FCM push for ride {RideId}",
+                        rideSnapshot.Id);
+                } 
             });
         }
 
@@ -159,56 +176,42 @@ public class RideService : IRideService
 
     public async Task<RideSummaryDto> AcceptAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
     {
-        var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
+        var riderStatus = await _dbContext.RiderStatuses
+            .FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
         if (riderStatus == null || !riderStatus.IsOnline || riderStatus.ApprovalStatus != RiderApprovalStatus.Approved)
-        {
             throw new InvalidOperationException("Only approved online riders can accept requests.");
-        }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-        var lockedRide = await _dbContext.RideRequests
-            .FromSqlInterpolated($@"SELECT * FROM ""RideRequests"" WHERE ""Id"" = {rideId} FOR UPDATE")
-            .SingleOrDefaultAsync(cancellationToken);
+        // Wrap transaction in execution strategy to work with NpgsqlRetryingExecutionStrategy
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
 
-        if (lockedRide == null)
+        return await strategy.ExecuteAsync(async () =>
         {
-            throw new InvalidOperationException("Ride request not found.");
-        }
+            await using var transaction = await _dbContext.Database
+                .BeginTransactionAsync(cancellationToken);
 
-        _stateMachine.EnsureTransition(lockedRide.Status, RideRequestStatus.Accepted);
+            var lockedRide = await _dbContext.RideRequests
+                .FromSqlInterpolated($@"SELECT * FROM ""RideRequests"" WHERE ""Id"" = {rideId} FOR UPDATE")
+                .SingleOrDefaultAsync(cancellationToken);
 
-        lockedRide.RiderId = riderId;
-        lockedRide.Status = RideRequestStatus.Accepted;
-        lockedRide.OTP = GenerateOtp();
-        lockedRide.OtpExpiresAt = DateTime.UtcNow.AddMinutes(RideConstants.OtpExpiryMinutes);
-        lockedRide.OTPAttempts = 0;
-        lockedRide.AcceptedAt = DateTime.UtcNow;
-        lockedRide.UpdatedAt = DateTime.UtcNow;
+            if (lockedRide == null)
+                throw new InvalidOperationException("Ride request not found.");
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+            _stateMachine.EnsureTransition(lockedRide.Status, RideRequestStatus.Accepted);
 
-        // SignalR — notify both participants
-        await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
+            lockedRide.RiderId      = riderId;
+            lockedRide.Status       = RideRequestStatus.Accepted;
+            lockedRide.OTP          = GenerateOtp();
+            lockedRide.OtpExpiresAt = DateTime.UtcNow.AddMinutes(RideConstants.OtpExpiryMinutes);
+            lockedRide.OTPAttempts  = 0;
+            lockedRide.AcceptedAt   = DateTime.UtcNow;
+            lockedRide.UpdatedAt    = DateTime.UtcNow;
 
-        // FCM push to student — they may have their app closed
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await _rideNotificationService.SendRideStatusPushToStudentAsync(
-                    lockedRide,
-                    title: "Rider Accepted Your Request 🛵",
-                    body:  "Your rider is on the way. Track them in the app!",
-                    CancellationToken.None);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "FCM push to student failed for ride {RideId}", lockedRide.Id);
-            }
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
+
+            return MapSummary(lockedRide);
         });
-
-        return MapSummary(lockedRide);
     }
 
     public async Task<RideSummaryDto> ArriveAsync(string riderId, string rideId, CancellationToken cancellationToken = default)
