@@ -5,7 +5,7 @@
   [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
   [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
   [![Entity Framework Core](https://img.shields.io/badge/EF_Core-10.0-512BD4?logo=nuget)](https://docs.microsoft.com/en-us/ef/core/)
-  [![Swagger](https://img.shields.io/badge/Swagger-85EA2D?logo=swagger&logoColor=black)](https://swagger.io/)
+  [![Scalar](https://img.shields.io/badge/Swagger-85EA2D?logo=swagger&logoColor=black)](https://api.nearusab.me/scalar/v1)
   [![JWT](https://img.shields.io/badge/JWT-black?logo=JSON%20web%20tokens)](https://jwt.io/)
 </div>
 
