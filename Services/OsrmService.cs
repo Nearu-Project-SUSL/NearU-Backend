@@ -12,7 +12,7 @@ namespace NearU_Backend_Revised.Services;
 /// Falls back to Haversine if OSRM is unreachable and <see cref="OsrmSettings.ThrowOnFailure"/> is false.
 ///
 /// OSRM Route API endpoint used:
-///   GET /route/v1/{profile}/{lon1},{lat1};{lon2},{lat2}?overview=false&steps=false
+///   GET /route/v1/{profile}/{lon1},{lat1};{lon2},{lat2}?overview=false&amp;steps=false
 ///
 /// Public demo server: http://router.project-osrm.org  (rate-limited, for dev only)
 /// Self-hosted:        http://your-osrm-host:5000
