@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781062101536,
+  "lastUpdate": 1781079143793,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -2140,6 +2140,60 @@ window.BENCHMARK_DATA = {
             "value": 389.845490137736,
             "unit": "ns",
             "range": "± 3.968332641777501"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "pamalpahasara@gmail.com",
+            "name": "pamal pahasara",
+            "username": "pamal29"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b05d41aac814f7814fbfde4d0cb97fb6bf7e2c06",
+          "message": "Merge pull request #181 from Nearu-Project-SUSL/NU-38-Rides-Mobility\n\nfeat: implement FcmTokenService to manage user notification tokens via upsert, delete, and retrieval operations",
+          "timestamp": "2026-06-10T13:41:09+05:30",
+          "tree_id": "d3bccb493c59cc233b8aa5d3ef8c5fcf963c8e76",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/b05d41aac814f7814fbfde4d0cb97fb6bf7e2c06"
+        },
+        "date": 1781079142890,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7166.419026692708,
+            "unit": "ns",
+            "range": "± 101.5236449326407"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146435053.75,
+            "unit": "ns",
+            "range": "± 135715.23609105207"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15697.52028910319,
+            "unit": "ns",
+            "range": "± 100.17341709943453"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1296.1424198150635,
+            "unit": "ns",
+            "range": "± 10.649487291994859"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 434.60752153396606,
+            "unit": "ns",
+            "range": "± 1.639907518788944"
           }
         ]
       }
