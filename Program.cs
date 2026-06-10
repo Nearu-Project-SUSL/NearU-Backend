@@ -57,7 +57,7 @@ builder.Services.AddOpenApi(options =>
         };
         document.Components ??= new Microsoft.OpenApi.OpenApiComponents();
         document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.IOpenApiSecurityScheme>();
-        document.Components.SecuritySchemes.Add("Bearer", securityScheme);
+        document.Components.SecuritySchemes!.Add("Bearer", securityScheme);
         
         return Task.CompletedTask;
     });
