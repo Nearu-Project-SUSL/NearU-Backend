@@ -60,7 +60,7 @@ It serves as the **core business logic layer** of the system, communicating with
 | **ORM** | Entity Framework Core 10 |
 | **Authentication** | JWT (JSON Web Tokens) Bearer |
 | **Storage / Media** | ImageKit |
-| **API Docs** | Swagger / OpenAPI |
+| **API Docs** | OpenAPI / Scalar UI |
 | **Security** | BCrypt.Net, AspNetCoreRateLimit |
 
 ---
@@ -155,13 +155,26 @@ NearU-Backend/
 
 ## 📚 API Documentation
 
-This project uses **Swagger** for interactive API documentation and endpoint testing.
-Once the application is running, navigate to the Swagger UI in your browser:
+This project generates OpenAPI documentation and exposes an interactive **Scalar API Reference UI** for endpoint testing and discovery (available in both development and production).
 
+### Interactive Scalar UI
+Once the application is running, navigate to the Scalar UI in your browser:
+- **Local (HTTPS):** `https://localhost:7189/scalar/v1`
+- **Local (HTTP):** `http://localhost:5059/scalar/v1`
+- **Production:** `https://api.nearusab.me/scalar/v1`
+
+From this interface, you can explore all endpoints, view schema schemas, and use the built-in HTTP client to test requests.
+
+### Authentication in Docs
+For endpoints requiring authorization, click the **"Authorize"** button or Authorization headers section and provide your JWT Bearer token:
 ```text
-https://localhost:5001/swagger
+Bearer <your-jwt-access-token>
 ```
-From here, you can explore all available endpoints, required parameters, schema definitions, and authenticate using the "Authorize" button to test protected routes.
+
+### Raw OpenAPI Specification
+The raw OpenAPI 3.0 document is served as JSON at:
+- **Local:** `http://localhost:5059/openapi/v1.json`
+- **Production:** `https://api.nearusab.me/openapi/v1.json`
 
 ---
 
