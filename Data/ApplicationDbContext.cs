@@ -193,7 +193,8 @@ namespace NearU_Backend_Revised.Data
                 entity.HasKey(r => r.Id);
 
                 entity.Property(r => r.Status)
-                    .HasConversion<string>();
+                    .HasConversion<string>()
+                    .HasMaxLength(30);
 
                 entity.Property(r => r.ServiceType)
                     .HasConversion<string>();
