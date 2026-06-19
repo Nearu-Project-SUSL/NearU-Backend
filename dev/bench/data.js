@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781419264439,
+  "lastUpdate": 1781878943721,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -2408,6 +2408,60 @@ window.BENCHMARK_DATA = {
             "value": 389.05891529719037,
             "unit": "ns",
             "range": "± 8.356530769052272"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6eb11e6d116f7031af419b2b4523b320f275dc5",
+          "message": "Merge pull request #185 from Nearu-Project-SUSL/feat/photography\n\nfeat: implement photographer service and management system with photography packages",
+          "timestamp": "2026-06-19T19:51:11+05:30",
+          "tree_id": "1a091bc6f437b9f22541cb2a581071cecc79bb43",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/e6eb11e6d116f7031af419b2b4523b320f275dc5"
+        },
+        "date": 1781878943226,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7185.341451009114,
+            "unit": "ns",
+            "range": "± 24.7199289844293"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 147040995.41666666,
+            "unit": "ns",
+            "range": "± 508414.33914453164"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15220.664489746094,
+            "unit": "ns",
+            "range": "± 62.6329004572345"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1263.4047114054363,
+            "unit": "ns",
+            "range": "± 5.96200665700482"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 450.3240219751994,
+            "unit": "ns",
+            "range": "± 3.355814976960395"
           }
         ]
       }
