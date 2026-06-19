@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace NearU.Api.Models
+namespace NearU_Backend_Revised.Models
 {
     public class TrainRoute
     {

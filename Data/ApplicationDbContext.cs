@@ -33,6 +33,10 @@ namespace NearU_Backend_Revised.Data
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
 
+        public DbSet<TukTukDriver> TukTukDrivers { get; set; }
+        public DbSet<BusRoute> BusRoutes { get; set; }
+        public DbSet<TrainRoute> TrainRoutes { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

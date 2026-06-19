@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace NearU.Api.Models
+namespace NearU_Backend_Revised.Models
 {
     public class TukTukDriver
     {
