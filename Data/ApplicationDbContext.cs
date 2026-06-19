@@ -33,6 +33,9 @@ namespace NearU_Backend_Revised.Data
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
 
+        public DbSet<Photographer> Photographers { get; set; } = null!;
+        public DbSet<PhotographyPackage> PhotographyPackages { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -459,6 +462,85 @@ namespace NearU_Backend_Revised.Data
                 entity.HasIndex(j => j.IsNew);
                 entity.HasIndex(j => j.CreatedAt);
                 entity.HasIndex(j => j.PostedByUserId);
+            });
+
+            // Configure Photographer entity
+            modelBuilder.Entity<Photographer>(entity =>
+            {
+                entity.HasKey(p => p.Id);
+
+                entity.Property(p => p.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Bio)
+                    .HasMaxLength(500);
+
+                entity.Property(p => p.BaseRatePerHour)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(p => p.LocationName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Phone)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(p => p.Email)
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.ImageUrl)
+                    .HasMaxLength(500);
+
+                entity.Property(p => p.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(p => p.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(p => p.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(p => p.Owner)
+                    .WithMany()
+                    .HasForeignKey(p => p.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                entity.HasIndex(p => p.OwnerId);
+            });
+
+            // Configure PhotographyPackage entity
+            modelBuilder.Entity<PhotographyPackage>(entity =>
+            {
+                entity.HasKey(pp => pp.Id);
+
+                entity.Property(pp => pp.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(pp => pp.Price)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(pp => pp.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(pp => pp.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(pp => pp.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(pp => pp.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(pp => pp.Photographer)
+                    .WithMany(p => p.Packages)
+                    .HasForeignKey(pp => pp.PhotographerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(pp => pp.PhotographerId);
             });
         }
     }
