@@ -3,6 +3,7 @@ namespace NearU_Backend_Revised.DTOs.FoodShop
     public class FoodShopResponse
     {
         public string Id { get; set; } = null!;
+        public string? OwnerId { get; set; }
 
         public string Name { get; set; } = null!;
 

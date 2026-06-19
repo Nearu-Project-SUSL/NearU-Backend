@@ -15,6 +15,10 @@ using NearU_Backend_Revised.Repositories;
 using NearU_Backend_Revised.Repositories.Interfaces;
 using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.Services.Interfaces;
+using NearU_Backend_Revised.Middleware;
+using AspNetCoreRateLimit;
+using System.Security.Claims;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +36,48 @@ builder.Services.AddControllers()
             return new BadRequestObjectResult(response);
         };
     });
-builder.Services.AddOpenApi();
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info.Title = "NearU API";
+        document.Info.Version = "v1";
+        document.Info.Description = "The core backend RESTful API powering the NearU platform: A University Lifestyle Hub and Local Business Marketplace.";
+        
+        // Add JWT Bearer Security Scheme
+        var securityScheme = new Microsoft.OpenApi.OpenApiSecurityScheme
+        {
+            Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+            Name = "Authorization",
+            In = Microsoft.OpenApi.ParameterLocation.Header,
+            Scheme = "Bearer",
+            BearerFormat = "JWT",
+            Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+        };
+        document.Components ??= new Microsoft.OpenApi.OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes!.Add("Bearer", securityScheme);
+        
+        return Task.CompletedTask;
+    });
+
+    options.AddOperationTransformer((operation, context, cancellationToken) =>
+    {
+        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+        if (metadata.OfType<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Any())
+        {
+            operation.Security = new List<Microsoft.OpenApi.OpenApiSecurityRequirement>
+            {
+                new()
+                {
+                    [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer")] = new List<string>()
+                }
+            };
+        }
+        return Task.CompletedTask;
+    });
+});
 
 // Health checks — used by the Docker Compose healthcheck directive
 builder.Services.AddHealthChecks();
@@ -58,7 +103,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add Rate Limiting for Login
+// Add Rate Limiting for Login (in-process fallback, AspNetCoreRateLimit handles distributed below)
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -70,6 +115,18 @@ builder.Services.AddRateLimiter(options =>
         options.QueueLimit = 0;
     });
 });
+
+// ── AspNetCoreRateLimit — distributed rate limiting backed by Redis IDistributedCache ─────────
+// Reads rules from appsettings.json [IpRateLimiting] section.
+// Counters are stored in IDistributedCache (Redis in production, MemoryCache in dev).
+builder.Services.AddMemoryCache(); // required by AspNetCoreRateLimit internals
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+builder.Services.AddInMemoryRateLimiting();
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 
 // Register JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
@@ -99,7 +156,10 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
         ),
-        ClockSkew = TimeSpan.FromMinutes(5)
+        ClockSkew = TimeSpan.FromMinutes(5),
+
+        RoleClaimType = ClaimTypes.Role,       
+        NameClaimType = ClaimTypes.NameIdentifier  
     };
 
     // SignalR WebSocket connections cannot set HTTP headers, so clients pass the
@@ -212,6 +272,15 @@ builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.Configure<RideSettings>(
     builder.Configuration.GetSection("RideSettings"));
 
+// ── OSRM routing service ─────────────────────────────────────────────────────
+builder.Services.Configure<OsrmSettings>(
+    builder.Configuration.GetSection("OsrmSettings"));
+// AddHttpClient<T> creates a typed HttpClient scoped to OsrmService.
+// Retry/timeout configuration lives in OsrmSettings; the HttpClient here is
+// intentionally vanilla so OsrmService can set BaseAddress/Timeout itself.
+builder.Services.AddHttpClient<IOsrmService, OsrmService>();
+// ─────────────────────────────────────────────────────────────────────────────
+
 builder.Services.AddScoped<IRideRepository, RideRepository>();
 builder.Services.AddScoped<IRideService, RideService>();
 builder.Services.AddScoped<IRideStateMachine, RideStateMachine>();
@@ -245,6 +314,11 @@ else
     builder.Services.AddSignalR();
 }
 
+// Register the CacheService AFTER AddStackExchangeRedisCache / AddDistributedMemoryCache
+// so IDistributedCache is already in the container.
+builder.Services.AddSingleton<ICacheService, CacheService>();
+
+
 // Firebase Admin Setup
 var firebaseCredentialsPath = builder.Configuration["Firebase:CredentialsPath"];
 if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(firebaseCredentialsPath))
@@ -259,6 +333,8 @@ if (!string.IsNullOrEmpty(firebaseCredentialsPath) && System.IO.File.Exists(fire
     }
 #pragma warning restore CS0618
 }
+
+
 
 
 var app = builder.Build();
@@ -325,10 +401,14 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-if (app.Environment.IsDevelopment())
+// Map OpenAPI document and Scalar API Reference UI globally (enabled in production)
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
 {
-    app.MapOpenApi();
-}
+    options.WithTitle("NearU API Documentation")
+           .WithTheme(ScalarTheme.Purple)
+           .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -344,8 +424,13 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.UseRouting();
 
 app.UseCors("AllowFrontend");
+// Distributed IP rate limiting (AspNetCoreRateLimit — Redis-backed in production)
+app.UseIpRateLimiting();
 app.UseRateLimiter();
 app.UseAuthentication();
+// Token blacklist check — runs after UseAuthentication so ClaimsPrincipal is populated.
+// Rejects requests whose JWT jti is in the Redis blacklist (e.g. after logout).
+app.UseMiddleware<TokenBlacklistMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<RidesHub>("/hubs/rides", options =>

@@ -23,7 +23,9 @@ public class FcmTokenService : IFcmTokenService
 
         if (existing is not null)
         {
-            // Token already stored — just bump the LastSeenAt timestamp
+            // Token already stored — update the UserId (in case a different user logged in on the same device)
+            // and bump the LastSeenAt timestamp
+            existing.UserId = userId;
             existing.LastSeenAt = DateTime.UtcNow;
         }
         else
