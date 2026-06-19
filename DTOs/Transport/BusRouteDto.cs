@@ -1,4 +1,4 @@
-namespace NearU.Api.DTOs.Transport
+namespace NearU_Backend_Revised.DTOs
 {
     public class BusRouteDto
     {
