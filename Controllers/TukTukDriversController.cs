@@ -19,7 +19,8 @@ namespace NearU_Backend_Revised.Controllers
 
         // Visible to any authenticated user (students)
         [HttpGet]
-        [Authorize]
+        [AllowAnonymous]
+
         public async Task<IActionResult> GetAll()
         {
             var drivers = await _service.GetAllAsync();

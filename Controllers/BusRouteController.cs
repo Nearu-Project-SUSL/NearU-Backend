@@ -18,7 +18,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpGet]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var routes = await _service.GetAllAsync();
