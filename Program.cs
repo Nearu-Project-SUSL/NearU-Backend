@@ -247,6 +247,10 @@ builder.Services.AddScoped<ITrainRouteService, TrainRouteService>();
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
 
+// Photography feature
+builder.Services.AddScoped<IPhotographerRepository, PhotographerRepository>();
+builder.Services.AddScoped<IPhotographerService, PhotographerService>();
+
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrEmpty(connectionString))
@@ -395,6 +399,39 @@ using (var scope = app.Services.CreateScope())
             );
 
             CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+        ");
+
+        context.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""Photographers"" (
+                ""Id"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""Bio"" character varying(500),
+                ""BaseRatePerHour"" numeric(18,2) NOT NULL,
+                ""LocationName"" character varying(150) NOT NULL,
+                ""Phone"" character varying(20) NOT NULL,
+                ""Email"" character varying(150),
+                ""ImageUrl"" character varying(500),
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                ""OwnerId"" text,
+                CONSTRAINT ""PK_Photographers"" PRIMARY KEY (""Id"")
+            );
+
+            CREATE TABLE IF NOT EXISTS ""PhotographyPackages"" (
+                ""Id"" uuid NOT NULL,
+                ""PhotographerId"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""Price"" numeric(18,2) NOT NULL,
+                ""Description"" character varying(300),
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_PhotographyPackages"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_PhotographyPackages_Photographers_PhotographerId"" FOREIGN KEY (""PhotographerId"") REFERENCES ""Photographers"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_PhotographyPackages_PhotographerId"" ON ""PhotographyPackages"" (""PhotographerId"");
         ");
 
         // Seed the initial Admin account from configuration
