@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NearU_Backend_Revised.Data;
 using NetTopologySuite.Geometries;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NearU_Backend_Revised.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619150733_AddTransportTables")]
+    partial class AddTransportTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -469,102 +472,6 @@ namespace NearU_Backend_Revised.Migrations
                     b.HasIndex("FoodShopId");
 
                     b.ToTable("MenuItems");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Photographer", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("BaseRatePerHour")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Bio")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("LocationName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OwnerId");
-
-                    b.ToTable("Photographers");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.PhotographyPackage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<Guid>("PhotographerId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PhotographerId");
-
-                    b.ToTable("PhotographyPackages");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.RefreshToken", b =>
@@ -1109,27 +1016,6 @@ namespace NearU_Backend_Revised.Migrations
                     b.Navigation("FoodShop");
                 });
 
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Photographer", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Owner");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.PhotographyPackage", b =>
-                {
-                    b.HasOne("NearU_Backend_Revised.Models.Photographer", "Photographer")
-                        .WithMany("Packages")
-                        .HasForeignKey("PhotographerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Photographer");
-                });
-
             modelBuilder.Entity("NearU_Backend_Revised.Models.RefreshToken", b =>
                 {
                     b.HasOne("NearU_Backend_Revised.Models.User", "User")
@@ -1216,11 +1102,6 @@ namespace NearU_Backend_Revised.Migrations
             modelBuilder.Entity("NearU_Backend_Revised.Models.GiftShop", b =>
                 {
                     b.Navigation("Products");
-                });
-
-            modelBuilder.Entity("NearU_Backend_Revised.Models.Photographer", b =>
-                {
-                    b.Navigation("Packages");
                 });
 
             modelBuilder.Entity("NearU_Backend_Revised.Models.RideRequest", b =>

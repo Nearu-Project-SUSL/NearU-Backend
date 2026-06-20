@@ -234,6 +234,14 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
+//Transport 
+builder.Services.AddScoped<ITukTukDriverRepository, TukTukDriverRepository>();
+builder.Services.AddScoped<IBusRouteRepository, BusRouteRepository>();
+builder.Services.AddScoped<ITrainRouteRepository, TrainRouteRepository>();
+builder.Services.AddScoped<ITukTukDriverService, TukTukDriverService>();
+builder.Services.AddScoped<IBusRouteService, BusRouteService>();
+builder.Services.AddScoped<ITrainRouteService, TrainRouteService>();
+
 
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
