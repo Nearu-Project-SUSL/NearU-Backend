@@ -9,17 +9,29 @@ namespace NearU_Backend_Revised.Services
     {
         private readonly IAccommodationRepository _repository;
         private readonly IImageService _imageService;
+        private readonly ICacheService _cache;
 
-        public AccommodationService(IAccommodationRepository repository, IImageService imageService)
+        private const string AllAccommodationsCacheKey = "nearu:accommodations:all";
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
+        public AccommodationService(IAccommodationRepository repository, IImageService imageService, ICacheService cache)
         {
             _repository = repository;
             _imageService = imageService;
+            _cache = cache;
         }
 
         public async Task<IEnumerable<AccommodationResponse>> GetAllAccommodationsAsync()
         {
+            var cached = await _cache.GetAsync<List<AccommodationResponse>>(AllAccommodationsCacheKey);
+            if (cached is not null)
+                return cached;
+
             var accommodations = await _repository.GetAllAsync();
-            return accommodations.Select(accommodation => MapToResponse(accommodation)); //transform each accommodation into AccommodationData
+            var result = accommodations.Select(MapToResponse).ToList();
+
+            await _cache.SetAsync(AllAccommodationsCacheKey, result, CacheTtl);
+            return result;
         }
 
         public async Task<AccommodationResponse?> GetAccommodationByIdAsync(string id)
@@ -30,7 +42,6 @@ namespace NearU_Backend_Revised.Services
         }
 
         public async Task<AccommodationResponse?> CreateAccommodationAsync(CreateAccommodation AccommodationData)
-
         {
             string? photoUrl = null;
 
@@ -39,10 +50,9 @@ namespace NearU_Backend_Revised.Services
                 photoUrl = await _imageService.UploadImageAsync(AccommodationData.Photo, "Accommodations");
             }
 
-
             var accommodation = new Accommodation
             {
-                Id = Guid.NewGuid().ToString(), //generate a unique id
+                Id = Guid.NewGuid().ToString(),
                 Name = AccommodationData.Name,
                 Description = AccommodationData.Description,
                 Address = AccommodationData.Address,
@@ -57,6 +67,7 @@ namespace NearU_Backend_Revised.Services
             };
 
             var created = await _repository.CreateAsync(accommodation);
+            await _cache.RemoveAsync(AllAccommodationsCacheKey);
             return MapToResponse(created);
         }
 
@@ -82,17 +93,20 @@ namespace NearU_Backend_Revised.Services
 
             var updated = await _repository.UpdateAsync(accommodation);
             if (updated == null) return null;
+
+            await _cache.RemoveAsync(AllAccommodationsCacheKey);
             return MapToResponse(updated);
         }
 
         public async Task<bool> DeleteAccommodationAsync(string id)
         {
-            return await _repository.DeleteAsync(id);
+            var result = await _repository.DeleteAsync(id);
+            await _cache.RemoveAsync(AllAccommodationsCacheKey);
+            return result;
         }
 
-        private static AccommodationResponse MapToResponse(Accommodation accommodation) //takes a model and return a AccommodationData
+        private static AccommodationResponse MapToResponse(Accommodation accommodation)
         {
-            // Parse comma-separated amenities string into a list
             var amenitiesList = string.IsNullOrWhiteSpace(accommodation.Amenities)
                 ? new List<string>()
                 : accommodation.Amenities

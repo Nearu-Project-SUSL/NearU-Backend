@@ -27,9 +27,15 @@ public class RideStateMachine : IRideStateMachine
         },
         [RideRequestStatus.InProgress] = new HashSet<RideRequestStatus>
         {
+            RideRequestStatus.CompletedByRider,
             RideRequestStatus.Completed,
             RideRequestStatus.Interrupted,
             RideRequestStatus.OTPLocked
+        },
+        [RideRequestStatus.CompletedByRider] = new HashSet<RideRequestStatus>
+        {
+            RideRequestStatus.Completed,
+            RideRequestStatus.Interrupted
         },
         [RideRequestStatus.Completed] = new HashSet<RideRequestStatus>(),
         [RideRequestStatus.Cancelled] = new HashSet<RideRequestStatus>(),

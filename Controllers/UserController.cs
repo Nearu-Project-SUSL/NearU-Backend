@@ -126,5 +126,40 @@ namespace NearU_Backend_Revised.Controllers
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
             }
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAccount(string id, [FromBody] DeleteAccountRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+                if (currentUserId != id && role != "Admin" && role != "SuperAdmin")
+                {
+                    return Forbid();
+                }
+
+                if (string.IsNullOrEmpty(request?.Password))
+                {
+                    return BadRequest(ApiResponse<object>.FailResponse("Password is required to delete the account."));
+                }
+
+                await _userService.DeleteAccountAsync(id, request.Password);
+                return Ok(ApiResponse<object>.SuccessResponse("Account deleted successfully", null));
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Incorrect password." || ex.Message == "User not found.")
+                {
+                    return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                }
+
+                // Log the full technical error to standard output (Dozzle logs) for backend developers
+                Console.WriteLine($"[ERROR] Secure Account Deletion failed for User ID {id}: {ex}");
+
+                return BadRequest(ApiResponse<object>.FailResponse("An unexpected database error occurred on the server while deleting your account. Please try again later or contact support."));
+            }
+        }
     }
 }
