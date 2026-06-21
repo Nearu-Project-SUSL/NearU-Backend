@@ -399,6 +399,27 @@ using (var scope = app.Services.CreateScope())
             );
 
             CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+
+            CREATE TABLE IF NOT EXISTS ""Deals"" (
+                ""Id"" text NOT NULL,
+                ""ShopName"" character varying(100) NOT NULL,
+                ""ShopType"" character varying(50) NOT NULL,
+                ""Title"" character varying(150) NOT NULL,
+                ""Description"" character varying(1000) NOT NULL,
+                ""BadgeText"" character varying(50) NOT NULL,
+                ""BadgeColor"" character varying(20) NOT NULL,
+                ""ImageUrl"" character varying(500),
+                ""ValidFrom"" timestamp with time zone,
+                ""ValidTo"" timestamp with time zone,
+                ""SubmittedByUserId"" text NOT NULL,
+                ""ApprovalStatus"" character varying(50) NOT NULL DEFAULT 'Pending',
+                ""RejectionReason"" character varying(500),
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_Deals"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_Deals_Users_SubmittedByUserId"" FOREIGN KEY (""SubmittedByUserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_Deals_SubmittedByUserId"" ON ""Deals"" (""SubmittedByUserId"");
         ");
 
         context.Database.ExecuteSqlRaw(@"
