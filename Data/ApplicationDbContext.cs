@@ -15,6 +15,7 @@ namespace NearU_Backend_Revised.Data
 
         // Existing DbSets
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<BusinessApplication> BusinessApplications { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<FoodShop> FoodShops { get; set; } = null!;
         public DbSet<Accommodation> Accommodations { get; set; } = null!;
@@ -32,12 +33,20 @@ namespace NearU_Backend_Revised.Data
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
 
+        public DbSet<TukTukDriver> TukTukDrivers { get; set; }
+        public DbSet<BusRoute> BusRoutes { get; set; }
+        public DbSet<TrainRoute> TrainRoutes { get; set; }
+        public DbSet<Photographer> Photographers { get; set; } = null!;
+        public DbSet<PhotographyPackage> PhotographyPackages { get; set; } = null!;
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             // Enable PostGIS Extension
             modelBuilder.HasPostgresExtension("postgis");
+
 
             // Configure RefreshToken entity
             modelBuilder.Entity<RefreshToken>(entity =>
@@ -81,6 +90,16 @@ namespace NearU_Backend_Revised.Data
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(u => u.Id);
+            });
+
+            modelBuilder.Entity<BusinessApplication>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configure GiftShop entity
@@ -446,6 +465,85 @@ namespace NearU_Backend_Revised.Data
                 entity.HasIndex(j => j.IsNew);
                 entity.HasIndex(j => j.CreatedAt);
                 entity.HasIndex(j => j.PostedByUserId);
+            });
+
+            // Configure Photographer entity
+            modelBuilder.Entity<Photographer>(entity =>
+            {
+                entity.HasKey(p => p.Id);
+
+                entity.Property(p => p.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Bio)
+                    .HasMaxLength(500);
+
+                entity.Property(p => p.BaseRatePerHour)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(p => p.LocationName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Phone)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(p => p.Email)
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.ImageUrl)
+                    .HasMaxLength(500);
+
+                entity.Property(p => p.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(p => p.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(p => p.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(p => p.Owner)
+                    .WithMany()
+                    .HasForeignKey(p => p.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                entity.HasIndex(p => p.OwnerId);
+            });
+
+            // Configure PhotographyPackage entity
+            modelBuilder.Entity<PhotographyPackage>(entity =>
+            {
+                entity.HasKey(pp => pp.Id);
+
+                entity.Property(pp => pp.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(pp => pp.Price)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(pp => pp.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(pp => pp.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(pp => pp.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(pp => pp.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(pp => pp.Photographer)
+                    .WithMany(p => p.Packages)
+                    .HasForeignKey(pp => pp.PhotographerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(pp => pp.PhotographerId);
             });
         }
     }

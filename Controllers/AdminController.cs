@@ -186,6 +186,116 @@ public class AdminController : ControllerBase
             $"Rider {newStatus.ToString().ToLower()} successfully.",
             new { riderId, status = newStatus.ToString() }));
     }
+
+    // ─── Business Application Approval ───────────────────────────────────────────
+
+    /// <summary>
+    /// GET /api/admin/businesses — list business applications, filter by status
+    /// </summary>
+    [HttpGet("businesses")]
+    public async Task<IActionResult> GetBusinessApplications(
+        [FromQuery] string? status = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.BusinessApplications
+            .Include(a => a.User)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(status))
+            query = query.Where(a => a.Status == status);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var applications = await query
+            .OrderByDescending(a => a.SubmittedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(a => new
+            {
+                a.Id,
+                a.UserId,
+                ownerEmail   = a.User.Email,
+                a.BusinessName,
+                a.BusinessType,
+                a.OwnerName,
+                a.Phone,
+                a.Address,
+                a.Status,
+                a.SubmittedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(ApiResponse<object>.SuccessResponse("Business applications fetched.",
+            new { total, page, pageSize, applications }));
+    }
+
+    /// <summary>
+    /// PUT /api/admin/businesses/{id}/approve
+    /// </summary>
+    [HttpPut("businesses/{id}/approve")]
+    public async Task<IActionResult> ApproveBusinessApplication(
+        string id, CancellationToken cancellationToken)
+    {
+        var application = await _dbContext.BusinessApplications
+            .Include(a => a.User)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+        if (application is null)
+            return NotFound(ApiResponse<object>.FailResponse("Application not found."));
+
+        if (application.Status != "Pending")
+            return BadRequest(ApiResponse<object>.FailResponse(
+                $"Application is already {application.Status}."));
+
+        // 1. Approve the application
+        application.Status = "Approved";
+
+        // 2. User already exists in DB — just confirm their role is "Business"
+        //    (it was set at registration, this is just a safety check)
+        application.User.Role = "Business";
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Admin approved business application {Id} for {Name}",
+            id, application.BusinessName);
+
+        return Ok(ApiResponse<object>.SuccessResponse(
+            $"'{application.BusinessName}' approved. Owner can now fill their business profile.",
+            new { id, status = "Approved" }));
+    }
+
+    /// <summary>
+    /// PUT /api/admin/businesses/{id}/reject
+    /// Body: { "reason": "..." }
+    /// </summary>
+    [HttpPut("businesses/{id}/reject")]
+    public async Task<IActionResult> RejectBusinessApplication(
+        string id, [FromBody] RejectBusinessDto request, CancellationToken cancellationToken)
+    {
+        var application = await _dbContext.BusinessApplications
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+        if (application is null)
+            return NotFound(ApiResponse<object>.FailResponse("Application not found."));
+
+        if (application.Status != "Pending")
+            return BadRequest(ApiResponse<object>.FailResponse(
+                $"Application is already {application.Status}."));
+
+        application.Status = "Rejected";
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Admin rejected business application {Id}. Reason: {Reason}",
+            id, request.Reason);
+
+        return Ok(ApiResponse<object>.SuccessResponse("Application rejected.",
+            new { id, status = "Rejected", request.Reason }));
+    }
+
+    
 }
 
 // ─── DTOs ─────────────────────────────────────────────────────────────────────
@@ -193,4 +303,9 @@ public class AdminController : ControllerBase
 public class SetRiderTierDto
 {
     public RiderTier Tier { get; set; }
+}
+
+public class RejectBusinessDto
+{
+    public string Reason { get; set; } = string.Empty;
 }

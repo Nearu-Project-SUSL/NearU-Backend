@@ -71,12 +71,13 @@ public class RideSummaryDto
     public double DropoffLongitude { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? OtpExpiresAt { get; set; }
-}
+    public string? Otp { get; set; }}
 
 public class RideLocationResponseDto
 {
     public string RideId { get; set; } = string.Empty;
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+    public decimal? DistanceToPickupKm { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 }

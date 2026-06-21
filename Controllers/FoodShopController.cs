@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.FoodShop;
 using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Enums;
+using System.Security.Claims;
 
 namespace NearU_Backend_Revised.Controllers
 {
@@ -68,9 +69,23 @@ namespace NearU_Backend_Revised.Controllers
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(string id, [FromForm] UpdateFoodShop request)
         {
+           //Get the shop first to check ownership
+            var existing = await _service.GetShopByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { message = "Shop not found" });
+
+            //Get caller's identity
+            var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin  = User.IsInRole("Admin");
+
+            //Only owner or admin can update
+            if (!isAdmin && existing.OwnerId != callerId)
+                return StatusCode(403, new { message = "You are not authorized to edit this shop." });
+
             var shop = await _service.UpdateShopAsync(id, request);
             if (shop == null)
                 return NotFound(new { message = "Shop not found" });
+
             return Ok(shop);
         }
 
@@ -78,10 +93,24 @@ namespace NearU_Backend_Revised.Controllers
         [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Delete(string id)
         {
+            //Get the shop first to check ownership
+            var existing = await _service.GetShopByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { message = "Shop not found" });
+
+            //Get caller's identity
+            var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin  = User.IsInRole("Admin");
+
+            //Only owner or admin can delete
+            if (!isAdmin && existing.OwnerId != callerId)
+                return StatusCode(403, new { message = "You are not authorized to delete this shop." });
+
             var deleted = await _service.DeleteShopAsync(id);
             if (!deleted)
                 return NotFound(new { message = "Shop not found" });
-            return NoContent(); //204 successful delete
+
+            return NoContent();
         }
     }
         
