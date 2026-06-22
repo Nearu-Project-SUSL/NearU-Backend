@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782072008168,
+  "lastUpdate": 1782162078661,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -2676,6 +2676,60 @@ window.BENCHMARK_DATA = {
             "value": 454.85365438461304,
             "unit": "ns",
             "range": "± 5.795193613122121"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "74ea68d130e3f48e2987c36fa3479434458f15db",
+          "message": "Merge pull request #193 from Nearu-Project-SUSL/NU32-Deals-Offers\n\nfeat: implement DealsController to manage deal submission, retrieval, and administrative approval workflows",
+          "timestamp": "2026-06-23T02:29:54+05:30",
+          "tree_id": "ffc852503964d5714860c9055aade348f0a8a47d",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/74ea68d130e3f48e2987c36fa3479434458f15db"
+        },
+        "date": 1782162077747,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7471.576924641927,
+            "unit": "ns",
+            "range": "± 29.011555816724165"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146842629.5,
+            "unit": "ns",
+            "range": "± 269754.5537247703"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15890.88052368164,
+            "unit": "ns",
+            "range": "± 47.715378455641485"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1313.6145032246907,
+            "unit": "ns",
+            "range": "± 5.759757861500313"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 455.0816577275594,
+            "unit": "ns",
+            "range": "± 1.732530075378241"
           }
         ]
       }
