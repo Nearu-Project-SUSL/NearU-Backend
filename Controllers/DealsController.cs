@@ -227,6 +227,7 @@ namespace NearU_Backend_Revised.Controllers
                 ValidTo = deal.ValidTo,
                 SubmittedByUserId = deal.SubmittedByUserId,
                 SubmittedByName = deal.SubmittedByUser?.Username ?? "Unknown Business",
+                ShopAddress = deal.SubmittedByUser?.Address,
                 ApprovalStatus = deal.ApprovalStatus,
                 RejectionReason = deal.RejectionReason,
                 CreatedAt = deal.CreatedAt
@@ -248,6 +249,7 @@ namespace NearU_Backend_Revised.Controllers
         public DateTime? ValidTo { get; set; }
         public string SubmittedByUserId { get; set; } = null!;
         public string SubmittedByName { get; set; } = null!;
+        public string? ShopAddress { get; set; }
         public string ApprovalStatus { get; set; } = null!;
         public string? RejectionReason { get; set; }
         public DateTime CreatedAt { get; set; }
