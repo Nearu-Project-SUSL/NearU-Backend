@@ -33,8 +33,9 @@ namespace NearU_Backend_Revised.Controllers
         {
             try
             {
+                var now = DateTime.UtcNow;
                 var deals = await _context.Deals
-                    .Where(d => d.ApprovalStatus == "Approved")
+                    .Where(d => d.ApprovalStatus == "Approved" && (d.ValidTo == null || d.ValidTo >= now))
                     .OrderByDescending(d => d.CreatedAt)
                     .Include(d => d.SubmittedByUser)
                     .ToListAsync();
@@ -232,6 +233,40 @@ namespace NearU_Backend_Revised.Controllers
                 RejectionReason = deal.RejectionReason,
                 CreatedAt = deal.CreatedAt
             };
+        }
+
+        // 7. DELETE /api/deals/{id} (Authenticated Business Owners / Admins - Delete a deal)
+        [HttpDelete("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
+        public async Task<IActionResult> DeleteDeal(string id)
+        {
+            try
+            {
+                var userId = User.FindFirstValue("userId");
+                var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(ApiResponse<object>.FailResponse("User not authenticated"));
+
+                var deal = await _context.Deals.FirstOrDefaultAsync(d => d.Id == id);
+                if (deal == null)
+                    return NotFound(ApiResponse<object>.FailResponse("Deal not found"));
+
+                // Logic: Admins can delete any deal, Business Owners can only delete their own deals
+                if (userRole != "Admin" && deal.SubmittedByUserId != userId)
+                {
+                    return StatusCode(403, ApiResponse<object>.FailResponse("You do not have permission to delete this deal"));
+                }
+
+                _context.Deals.Remove(deal);
+                await _context.SaveChangesAsync();
+
+                return Ok(ApiResponse<object>.SuccessResponse("Deal deleted successfully", null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
         }
     }
 
