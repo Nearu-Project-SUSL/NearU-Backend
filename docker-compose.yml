@@ -11,7 +11,7 @@ services:
     container_name: nearu-db
     restart: always
     ports:
-      - "54321:5432" # Exposed for team access as requested
+      - "127.0.0.1:54321:5432" # Closed to public internet, accessible only via SSH tunnel
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
