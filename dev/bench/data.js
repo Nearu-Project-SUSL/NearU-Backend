@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783834121484,
+  "lastUpdate": 1784438541394,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -2940,6 +2940,58 @@ window.BENCHMARK_DATA = {
             "value": 456.36581325531006,
             "unit": "ns",
             "range": "± 0.6667365709889544"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011",
+            "email": "tnirajaya2001@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "d94db1cdf5854bdf464209276d3d617b318de6c0",
+          "message": "Merge pull request #195 from Nearu-Project-SUSL/Access-change\n\nchore: update service configurations in docker-compose.yml",
+          "timestamp": "2026-06-29T20:49:31Z",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/d94db1cdf5854bdf464209276d3d617b318de6c0"
+        },
+        "date": 1784438540690,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7208.3518625895185,
+            "unit": "ns",
+            "range": "± 57.90393203734299"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146657929.66666666,
+            "unit": "ns",
+            "range": "± 395442.56811841"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15197.21635945638,
+            "unit": "ns",
+            "range": "± 610.0852203277951"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1279.5148595174153,
+            "unit": "ns",
+            "range": "± 3.72993802998995"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 441.017578125,
+            "unit": "ns",
+            "range": "± 5.089162155589868"
           }
         ]
       }
