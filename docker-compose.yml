@@ -92,6 +92,22 @@ services:
       - nearu-internal
       - nearu-proxy
 
+  nearu-nginx:
+    image: nginx:alpine
+    container_name: nearu-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
+    networks:
+      - nearu-internal
+      - nearu-proxy
+
 networks:
   nearu-internal:
     driver: bridge
