@@ -359,10 +359,10 @@ using (var scope = app.Services.CreateScope())
     {
         var dbContext = services.GetRequiredService<ApplicationDbContext>();
         
-        // Automatically apply any pending EF Core migrations on startup
+        // 1. MUST BE FIRST: Apply EF Core Migrations to create 'Users' and other tables
         try
         {
-            dbContext.Database.Migrate(); 
+            await dbContext.Database.MigrateAsync();
         }
         catch (Exception ex)
         {
@@ -370,6 +370,7 @@ using (var scope = app.Services.CreateScope())
             logger.LogWarning(ex, "Database migration failed (possibly due to missing PostGIS extension locally). Continuing with fallback table creation...");
         }
 
+        // 2. NOW raw SQL & seeding can safely run!
         // Ensure GiftShop tables exist in case EF Migrations History is out of sync
         dbContext.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""GiftShops"" (
