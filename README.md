@@ -25,6 +25,7 @@ It serves as the **core business logic layer** of the system, communicating with
 - Registration and secure authentication using ASP.NET Identity + JWT & Refresh Tokens.
 - Role-based access control (Student, Business Owner, Rider, Admin).
 - Password hashing (BCrypt) and API Rate Limiting for brute-force protection.
+- Rate Limiting and Nginx load balancing
 
 ### 🏪 Business Management
 - Create and manage business listings.
