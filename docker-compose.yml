@@ -40,6 +40,8 @@ services:
     image: ghcr.io/nearu-project-susl/nearu-backend:latest
     container_name: nearu-api
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       - nearu-db
       - nearu-redis
@@ -62,6 +64,7 @@ services:
       - SendGrid__FromEmail=${SendGrid__FromEmail}
       - AdminSeed__Email=${AdminSeed__Email}
       # ── OSRM ──────────────────────────────────────────────────────────────
+      # Note: Make sure port matches nearu-osrm internal container port (usually 5000)
       - OsrmSettings__BaseUrl=http://nearu-osrm:5000
       - OsrmSettings__Profile=driving
       - OsrmSettings__TimeoutSeconds=5
@@ -72,8 +75,6 @@ services:
     networks:
       - nearu-internal
       - nearu-proxy
-    # Note: Healthcheck is removed because .NET "Chiseled" images
-    # do not contain 'curl' or a shell to run the test.
 
   dozzle:
     container_name: dozzle
