@@ -117,7 +117,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "docker-compose.yml,nginx.conf"
-          target: "/root/nearu-backend/"
+          target: "/home/ubuntu/"
 
       - name: Deploy to Lightsail
         uses: appleboy/ssh-action@master
@@ -131,6 +131,7 @@ jobs:
           envs: GH_PAT,GITHUB_ACTOR
           script: |
             echo "$GH_PAT" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            sudo cp /home/ubuntu/docker-compose.yml /home/ubuntu/nginx.conf /root/nearu-backend/
             cd /root/nearu-backend
             docker compose pull
             docker compose up -d
