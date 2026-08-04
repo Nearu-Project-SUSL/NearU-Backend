@@ -357,11 +357,12 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<ApplicationDbContext>();
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
         
+        // Automatically apply any pending EF Core migrations on startup
         try
         {
-            context.Database.Migrate();
+            dbContext.Database.Migrate(); 
         }
         catch (Exception ex)
         {
@@ -370,7 +371,7 @@ using (var scope = app.Services.CreateScope())
         }
 
         // Ensure GiftShop tables exist in case EF Migrations History is out of sync
-        context.Database.ExecuteSqlRaw(@"
+        dbContext.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""GiftShops"" (
                 ""Id"" uuid NOT NULL,
                 ""Name"" character varying(150) NOT NULL,
@@ -422,7 +423,7 @@ using (var scope = app.Services.CreateScope())
             CREATE INDEX IF NOT EXISTS ""IX_Deals_SubmittedByUserId"" ON ""Deals"" (""SubmittedByUserId"");
         ");
 
-        context.Database.ExecuteSqlRaw(@"
+        dbContext.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""Photographers"" (
                 ""Id"" uuid NOT NULL,
                 ""Name"" character varying(150) NOT NULL,
@@ -455,7 +456,7 @@ using (var scope = app.Services.CreateScope())
             CREATE INDEX IF NOT EXISTS ""IX_PhotographyPackages_PhotographerId"" ON ""PhotographyPackages"" (""PhotographerId"");
         ");
 
-        // Seed the initial Admin account from configuration
+        // Your seeding logic follows here...
         var seeder = services.GetRequiredService<AdminSeederService>();
         await seeder.SeedAsync();
     }
