@@ -13,11 +13,13 @@ namespace NearU_Backend_Revised.Controllers
     {
         private readonly IJobService _jobservice;
         private readonly IImageService _imageService;
+        private readonly ILogger<JobController> _logger;
 
-        public JobController(IJobService jobservice, IImageService imageService)
+        public JobController(IJobService jobservice, IImageService imageService, ILogger<JobController> logger)
         {
             _jobservice = jobservice;
             _imageService = imageService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -113,7 +115,7 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
         [HttpPost]
-        [Authorize(Policy = "RequireBusinessOrAdmin")]
+        [Authorize]  // Any authenticated user can post a job
         public async Task<IActionResult> CreateJob([FromBody] CreateJob dto)
         {
             try
@@ -130,11 +132,12 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Error creating job for userId={UserId}", User.FindFirstValue("userId"));
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
         [HttpPut("{id}")]
-        [Authorize(Policy = "RequireBusinessOrAdmin")]
+        [Authorize]  // Any authenticated user can update their own job
         public async Task<IActionResult> UpdateJob(string id, [FromBody] UpdateJob dto)
         {
             try
@@ -154,15 +157,16 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, ApiResponse<object>.FailResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Error updating job id={JobId}", id);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
         [HttpDelete("{id}")]
-        [Authorize(Policy = "RequireBusinessOrAdmin")]
+        [Authorize]  // Any authenticated user can delete their own job
         public async Task<IActionResult> DeleteJob(string id)
         {
             try
@@ -177,16 +181,17 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, ApiResponse<object>.FailResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Error deleting job id={JobId}", id);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
         [HttpPost("upload-logo")]
-        [Authorize(Policy = "RequireBusinessOrAdmin")]
+        [Authorize]  // Any authenticated user who can post jobs can upload a logo
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadLogo([FromForm] IFormFile file)
         {
@@ -204,7 +209,8 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<object>.FailResponse($"Upload failed: {ex.Message}"));
+                _logger.LogError(ex, "Error uploading job logo");
+                return StatusCode(500, ApiResponse<object>.FailResponse("Upload failed. Please try again."));
             }
         }
     }

@@ -48,6 +48,13 @@ namespace NearU_Backend_Revised.Services
         Task TrackActiveTokenAsync(string userId, string jti, TimeSpan tokenLifetime);
 
         /// <summary>
+        /// Removes a single jti from the user's active-JTI Redis Set.
+        /// Called on per-device logout after the jti has been blacklisted, so that
+        /// Sign-Out-All-Devices does not attempt to re-blacklist an already-revoked token.
+        /// </summary>
+        Task RemoveActiveTokenAsync(string userId, string jti);
+
+        /// <summary>
         /// Revokes every active access token for <paramref name="userId"/> by:
         ///   1. Reading the user's JTI Set from Redis.
         ///   2. Adding each jti to the blacklist.

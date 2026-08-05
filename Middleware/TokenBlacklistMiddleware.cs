@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using NearU_Backend_Revised.Models;
 using NearU_Backend_Revised.Services;
 
 namespace NearU_Backend_Revised.Middleware
@@ -6,7 +7,7 @@ namespace NearU_Backend_Revised.Middleware
     /// <summary>
     /// ASP.NET Core middleware that checks authenticated requests against the Redis JWT blacklist.
     /// Must be registered AFTER UseAuthentication() so ClaimsPrincipal is populated.
-    /// Returns 401 if the token's jti is on the blacklist (e.g. after logout).
+    /// Returns 401 with a standard ApiResponse body if the token's jti is on the blacklist (e.g. after logout).
     /// </summary>
     public class TokenBlacklistMiddleware
     {
@@ -28,16 +29,27 @@ namespace NearU_Backend_Revised.Middleware
 
                 if (!string.IsNullOrWhiteSpace(jti))
                 {
-                    bool isBlacklisted = await tokenService.IsTokenBlacklistedAsync(jti);
+                    bool isBlacklisted;
+                    try
+                    {
+                        isBlacklisted = await tokenService.IsTokenBlacklistedAsync(jti);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Redis is unavailable — fail-open (log and continue) so a cache outage
+                        // does not lock every authenticated user out of the API.
+                        _logger.LogError(ex, "Redis unavailable during blacklist check for jti={Jti}. Failing open.", jti);
+                        await _next(context);
+                        return;
+                    }
+
                     if (isBlacklisted)
                     {
-                        _logger.LogWarning("Rejected blacklisted token with jti={Jti}", jti);
+                        _logger.LogWarning("Rejected blacklisted token jti={Jti} for path={Path}.", jti, context.Request.Path);
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                        await context.Response.WriteAsJsonAsync(new
-                        {
-                            success = false,
-                            message = "Token has been revoked. Please log in again."
-                        });
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsJsonAsync(
+                            ApiResponse<object>.FailResponse("Token has been revoked. Please log in again."));
                         return;
                     }
                 }

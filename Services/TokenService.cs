@@ -255,6 +255,15 @@ namespace NearU_Backend_Revised.Services
         }
 
         /// <summary>
+        /// Removes a single jti from the user's active-JTI Set (called on per-device logout).
+        /// </summary>
+        public async Task RemoveActiveTokenAsync(string userId, string jti)
+        {
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(jti)) return;
+            await _cache.SetRemoveAsync(UserJtiSetKeyPrefix + userId, jti);
+        }
+
+        /// <summary>
         /// Sign-Out-All-Devices: reads every tracked jti for <paramref name="userId"/>,
         /// blacklists each one, then removes the Set.
         /// </summary>

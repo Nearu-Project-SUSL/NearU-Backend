@@ -3,9 +3,7 @@ using NearU_Backend_Revised.Services;
 using NearU_Backend_Revised.DTOs.Auth;
 using NearU_Backend_Revised.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using System.ComponentModel.DataAnnotations;
-using System.Linq.Expressions;
 using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Options;
@@ -21,12 +19,18 @@ namespace NearU_Backend_Revised.Controllers
         private readonly UserService _userService;
         private readonly ITokenService _tokenService;
         private readonly JwtSettings _jwtSettings;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(UserService userService, ITokenService tokenService, IOptions<JwtSettings> jwtSettings)
+        public AuthController(
+            UserService userService,
+            ITokenService tokenService,
+            IOptions<JwtSettings> jwtSettings,
+            ILogger<AuthController> logger)
         {
             _userService = userService;
             _tokenService = tokenService;
             _jwtSettings = jwtSettings.Value;
+            _logger = logger;
         }
 
         [HttpPost("register")]
@@ -55,24 +59,52 @@ namespace NearU_Backend_Revised.Controllers
 
                 return Created(string.Empty, ApiResponse<object>.SuccessResponse(message, data));
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex) when (ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("Invalid role", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("required for business", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("BusinessType must be", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("cannot be created via registration", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during registration for email={Email}", request.Email);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
         [HttpPost("login")]
         [EnableRateLimiting("login-limit")]
-        public async Task<IActionResult> Login([FromBody]LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             try
             {
                 var authResponse = await _userService.Login(request);
-                return Ok(ApiResponse<object>.SuccessResponse("Login successful", authResponse)); 
+                return Ok(ApiResponse<object>.SuccessResponse("Login successful", authResponse));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex) when (ex.Message.Equals("Invalid credentials", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("deactivated", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("suspended", StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Unhandled error during login for email={Email}", request.Email);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -84,9 +116,19 @@ namespace NearU_Backend_Revised.Controllers
                 var authResponse = await _userService.GoogleLoginAsync(request);
                 return Ok(ApiResponse<object>.SuccessResponse("Google Login successful", authResponse));
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex) when (ex.Message.Contains("Invalid Google token", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("deactivated", StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during Google login");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -98,9 +140,15 @@ namespace NearU_Backend_Revised.Controllers
                 var authResponse = await _userService.RefreshToken(request);
                 return Ok(ApiResponse<object>.SuccessResponse("Token refreshed successfully", authResponse));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.Message.Contains("Invalid or expired refresh token", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("User not found", StringComparison.OrdinalIgnoreCase))
             {
                 return Unauthorized(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during token refresh");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -129,7 +177,8 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Unhandled error fetching user id={UserId}", id);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -141,9 +190,16 @@ namespace NearU_Backend_Revised.Controllers
                 await _userService.ForgotPassword(request);
                 return Ok(ApiResponse<object>.SuccessResponse("Password reset code sent to your email.", default!));
             }
+            catch (Exception ex) when (ex.Message.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
+            {
+                // Return generic message to avoid user-enumeration attacks
+                _logger.LogInformation("ForgotPassword requested for unknown email={Email}", request.Email);
+                return Ok(ApiResponse<object>.SuccessResponse("If that email is registered, a reset code has been sent.", default!));
+            }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Unhandled error during forgot-password for email={Email}", request.Email);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -155,12 +211,19 @@ namespace NearU_Backend_Revised.Controllers
                 var isValid = _userService.VerifyResetCode(request);
                 if (isValid)
                     return Ok(ApiResponse<object>.SuccessResponse("Code verified successfully.", default!));
-                
+
                 return BadRequest(ApiResponse<object>.FailResponse("Invalid verification code."));
+            }
+            catch (Exception ex) when (ex.Message.Contains("expired", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("Invalid verification code", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("No verification code", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Unhandled error during verify-reset-code");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -175,9 +238,17 @@ namespace NearU_Backend_Revised.Controllers
 
                 return BadRequest(ApiResponse<object>.FailResponse("Failed to reset password."));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.Message.Contains("expired", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("Invalid verification code", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("No verification code", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("User not found", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during password reset");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -187,7 +258,6 @@ namespace NearU_Backend_Revised.Controllers
         {
             try
             {
-                // Retrieve user ID claim from authenticated token
                 var userId = User.FindFirst("userId")?.Value;
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized(ApiResponse<object>.FailResponse("User ID claim is missing."));
@@ -198,14 +268,21 @@ namespace NearU_Backend_Revised.Controllers
 
                 return BadRequest(ApiResponse<object>.FailResponse("Failed to change password."));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.Message.Contains("incorrect", StringComparison.OrdinalIgnoreCase)
+                                     || ex.Message.Contains("wrong password", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during change-password");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
         /// <summary>
         /// Standard logout — revokes the refresh token in DB and blacklists the current device's jti.
+        /// Idempotent: returns 200 even if the refresh token was already revoked.
         /// </summary>
         [HttpPost("logout")]
         [Authorize]
@@ -213,31 +290,33 @@ namespace NearU_Backend_Revised.Controllers
         {
             try
             {
-                // 1. Revoke the refresh token in the database
-                var success = await _userService.Logout(request.RefreshToken);
-                if (!success)
-                    return BadRequest(ApiResponse<object>.FailResponse("Logout failed"));
-
                 var userId = User.FindFirst("userId")?.Value;
                 var jti    = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
                 var remaining = TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpiryInMinutes);
 
-                // 2. Blacklist only the current device's access token
+                // 1. Revoke the refresh token in the database (best-effort — already-revoked is fine)
+                var revoked = await _userService.Logout(request.RefreshToken);
+                if (!revoked)
+                    _logger.LogInformation("Logout: refresh token was already revoked or not found (userId={UserId}).", userId);
+
+                // 2. Blacklist the current device's access token in Redis
                 if (!string.IsNullOrWhiteSpace(jti))
                     await _tokenService.BlacklistTokenAsync(jti, remaining);
 
-                // 3. Remove this jti from the user's active-token Set
+                // 3. Remove this jti from the user's active-token Set (FIX: was incorrectly calling TrackActiveTokenAsync which ADDS)
                 if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(jti))
-                    await _tokenService.TrackActiveTokenAsync(userId, jti, remaining);
-                    // Note: SetRemoveAsync is not yet on ITokenService to keep concerns separated;
-                    // TrackActiveTokenAsync is a no-op for a jti already in the set,
-                    // so BlacklistAllUserTokensAsync at any point later will still catch it.
+                    await _tokenService.RemoveActiveTokenAsync(userId, jti);
 
                 return Ok(ApiResponse<object>.SuccessResponse("Logged out successfully", default!));
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during logout");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
@@ -263,18 +342,24 @@ namespace NearU_Backend_Revised.Controllers
 
                 var tokenLifetime = TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpiryInMinutes);
 
-                // Blacklist all tracked access tokens
+                // Blacklist all tracked access tokens and wipe the JTI Set
                 await _tokenService.BlacklistAllUserTokensAsync(userId, tokenLifetime);
 
                 // Revoke all refresh tokens in DB
-                await _userService.LogoutAllDevices(userId);
+                var revokedCount = await _userService.LogoutAllDevices(userId);
+                _logger.LogInformation("LogoutAll: revoked {Count} refresh token(s) for userId={UserId}.", revokedCount, userId);
 
                 return Ok(ApiResponse<object>.SuccessResponse(
                     "Signed out from all devices successfully.", default!));
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
                 return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error during logout-all");
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
     }
