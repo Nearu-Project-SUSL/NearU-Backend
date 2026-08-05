@@ -67,8 +67,9 @@ namespace NearU_Backend_Revised.Services
                 Key         = key,
                 InputStream = stream,
                 ContentType = file.ContentType,
-                // Public-read so the returned URL is directly accessible
-                CannedACL   = S3CannedACL.PublicRead,
+                // Note: Do NOT set CannedACL here.
+                // Since April 2023, new S3 buckets have Object Ownership = "Bucket owner enforced"
+                // which disables ACLs entirely. Public access is controlled via a Bucket Policy.
             };
 
             try
