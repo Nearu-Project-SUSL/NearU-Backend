@@ -28,11 +28,12 @@ namespace NearU_Backend_Revised.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly IHubContext<RidesHub> _hubContext;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<UserService> _logger;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
 
         public UserService(
-            UserRepository userrepo, 
+            UserRepository userrepo,
             ITokenService tokenService,
             IRefreshTokenRepository refreshTokenRepo,
             IOptions<JwtSettings> jwtSettings,
@@ -40,7 +41,8 @@ namespace NearU_Backend_Revised.Services
             IEmailService emailService,
             ApplicationDbContext dbContext,
             IHubContext<RidesHub> hubContext,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<UserService> logger)
         {
             _userRepo = userrepo;
             _tokenService = tokenService;
@@ -51,6 +53,7 @@ namespace NearU_Backend_Revised.Services
             _dbContext = dbContext;
             _hubContext = hubContext;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<User> Register(RegisterRequest request)
@@ -181,8 +184,8 @@ namespace NearU_Backend_Revised.Services
                 }
                 catch (Exception ex)
                 {
-                    // Catch exception to make sure failing email doesn't crash rider registration.
-                    Console.WriteLine($"[Email Service Error] Failed to send admin email: {ex.Message}");
+                    // Non-fatal: email failure must not abort registration.
+                    _logger.LogWarning(ex, "Failed to send admin notification email for new rider userId={UserId}.", user.Id);
                 }
 
                 // Method B: SignalR Broadcast to Admin Console
@@ -199,8 +202,8 @@ namespace NearU_Backend_Revised.Services
                 }
                 catch (Exception ex)
                 {
-                    // Catch exception to prevent SignalR disconnects from crashing registration.
-                    Console.WriteLine($"[SignalR Error] Failed to broadcast admin alert: {ex.Message}");
+                    // Non-fatal: SignalR failure must not abort registration.
+                    _logger.LogWarning(ex, "Failed to broadcast SignalR admin alert for new rider userId={UserId}.", user.Id);
                 }
             }
 
@@ -213,17 +216,26 @@ namespace NearU_Backend_Revised.Services
         public async Task<AuthResponse> Login(LoginRequest request)
         {
             var user = await _userRepo.GetUserByEmail(request.Email);
+
+            // Validate credentials — use the same generic message to prevent user-enumeration.
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                throw new Exception("Invalid credentials");
+                throw new UnauthorizedAccessException("Invalid credentials");
+
+            // Guard: deactivated / suspended accounts cannot log in.
+            if (user.IsActive != 1)
+                throw new UnauthorizedAccessException("Your account has been deactivated. Please contact support.");
+
+            // Track last login
+            user.LastLoginDate = DateTime.UtcNow.ToString("o");
+            await _userRepo.UpdateUserAsync(user);
 
             // Generate access token
             var accessToken = _tokenService.GenerateAccessToken(user);
 
-            // Generate refresh token
+            // Generate and persist refresh token
             var refreshToken = _tokenService.GenerateRefreshToken(user.Id);
             await _refreshTokenRepo.SaveRefreshTokenAsync(refreshToken);
 
-            // Build response
             return new AuthResponse
             {
                 UserId = user.Id,
@@ -257,19 +269,28 @@ namespace NearU_Backend_Revised.Services
             
             if (user == null)
             {
-                // Create user if not exists
+                // Create user on first Google login
                 user = new User
                 {
                     Id = Guid.NewGuid().ToString(),
                     Username = payload.Name ?? payload.Email.Split('@')[0],
                     Email = payload.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random placeholder
                     Role = "Student", // Default role
                     CreatedDate = DateTime.UtcNow.ToString("o"),
                     IsActive = 1
                 };
                 await _userRepo.AddUser(user);
             }
+            else if (user.IsActive != 1)
+            {
+                // Guard: deactivated accounts cannot log in via Google either.
+                throw new UnauthorizedAccessException("Your account has been deactivated. Please contact support.");
+            }
+
+            // Track last login
+            user.LastLoginDate = DateTime.UtcNow.ToString("o");
+            await _userRepo.UpdateUserAsync(user);
 
             // Generate access token
             var accessToken = _tokenService.GenerateAccessToken(user);
