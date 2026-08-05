@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785932089230,
+  "lastUpdate": 1785951866042,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3204,6 +3204,60 @@ window.BENCHMARK_DATA = {
             "value": 305.9164679845174,
             "unit": "ns",
             "range": "± 3.141605170563257"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "778b56c6c6ce8ef8ff96b0a850081c70b7bbff6a",
+          "message": "Merge pull request #207 from Nearu-Project-SUSL/S3-Config\n\nfeat: implement ImageService for AWS S3 uploads and update nginx configuration",
+          "timestamp": "2026-08-05T23:13:11+05:30",
+          "tree_id": "b49d3451c88553f5a1c1e98f7967a2d22c1075d0",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/778b56c6c6ce8ef8ff96b0a850081c70b7bbff6a"
+        },
+        "date": 1785951865229,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 6948.398747762044,
+            "unit": "ns",
+            "range": "± 132.29706216818568"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 147128928.91666666,
+            "unit": "ns",
+            "range": "± 630006.0497098586"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15927.963012695312,
+            "unit": "ns",
+            "range": "± 99.91851651054225"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1287.6742897033691,
+            "unit": "ns",
+            "range": "± 24.852763977420246"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 479.90670283635455,
+            "unit": "ns",
+            "range": "± 29.62890187382174"
           }
         ]
       }
