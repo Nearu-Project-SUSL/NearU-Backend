@@ -212,15 +212,14 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business, UserRoles.Admin));
 });
 
-builder.Services.Configure<ImageKitSettings>(
-    builder.Configuration.GetSection("ImageKit"));
+builder.Services.Configure<S3Settings>(
+    builder.Configuration.GetSection("AWS"));
 
 // Food feature
 builder.Services.AddScoped<IFoodShopRepository, FoodShopRepository>();
 builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
 builder.Services.AddScoped<IFoodShopService, FoodShopService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
-builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
 //testimonial
