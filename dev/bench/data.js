@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785648473172,
+  "lastUpdate": 1785927673652,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3096,6 +3096,60 @@ window.BENCHMARK_DATA = {
             "value": 446.1451636950175,
             "unit": "ns",
             "range": "± 1.4617171356354062"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7ad49c92f5fe58f7b51354ed314ee5c5bdfccd53",
+          "message": "Merge pull request #204 from Nearu-Project-SUSL/Auth-Fixes\n\nImplement JWT middleware and JobController with Nginx CORS support",
+          "timestamp": "2026-08-05T16:29:59+05:30",
+          "tree_id": "1211b390a9bd38177398acdb65b72e40eea33486",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/7ad49c92f5fe58f7b51354ed314ee5c5bdfccd53"
+        },
+        "date": 1785927672958,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7376.804763793945,
+            "unit": "ns",
+            "range": "± 24.644661295144548"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 151344158.33333334,
+            "unit": "ns",
+            "range": "± 135923.31708203466"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14903.864273071289,
+            "unit": "ns",
+            "range": "± 151.424908473152"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1266.7664756774902,
+            "unit": "ns",
+            "range": "± 7.898702602063125"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 446.78650792439777,
+            "unit": "ns",
+            "range": "± 0.6070226452421039"
           }
         ]
       }
