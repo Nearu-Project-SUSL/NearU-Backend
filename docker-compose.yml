@@ -56,9 +56,12 @@ services:
       - JwtSettings__Audience=NearU-Client
       - JwtSettings__AccessTokenExpiryInMinutes=15
       - JwtSettings__RefreshTokenExpiryInDays=7
-      - ImageKit__PublicKey=${IMAGEKIT_PUBLIC_KEY}
-      - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
-      - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
+      # ── AWS S3 Image Storage ───────────────────────────────────────────────
+      - AWS__AccessKey=${AWS__AccessKey}
+      - AWS__SecretKey=${AWS__SecretKey}
+      - AWS__BucketName=${AWS__BucketName}
+      - AWS__Region=${AWS__Region}
+      # ─────────────────────────────────────────────────────────────────────
       - Firebase__CredentialsPath=/app/firebase-adminsdk.json
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
