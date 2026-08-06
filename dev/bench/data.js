@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785951866042,
+  "lastUpdate": 1786001885965,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3258,6 +3258,58 @@ window.BENCHMARK_DATA = {
             "value": 479.90670283635455,
             "unit": "ns",
             "range": "± 29.62890187382174"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "Thimira Niranjaya",
+            "name": "Thimira Niranjaya"
+          },
+          "committer": {
+            "email": "Thimira Niranjaya",
+            "name": "Thimira Niranjaya"
+          },
+          "distinct": true,
+          "id": "3739589ef685a58dffbacc90764ecceb69016747",
+          "message": "Merge branch 'S3-Config' into dev",
+          "timestamp": "2026-08-06T13:06:52+05:30",
+          "tree_id": "54c83a7c5794545e250bfab83f877be15f505daa",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/3739589ef685a58dffbacc90764ecceb69016747"
+        },
+        "date": 1786001885661,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 8210.088165283203,
+            "unit": "ns",
+            "range": "± 10.202481240719305"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165483113.08333334,
+            "unit": "ns",
+            "range": "± 43975.37370103673"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 12113.35319773356,
+            "unit": "ns",
+            "range": "± 243.66796374473685"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1332.321360905965,
+            "unit": "ns",
+            "range": "± 24.528987023431107"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 386.9902801513672,
+            "unit": "ns",
+            "range": "± 5.818221089349173"
           }
         ]
       }
