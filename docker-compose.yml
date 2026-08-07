@@ -66,6 +66,8 @@ services:
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
       - AdminSeed__Email=${AdminSeed__Email}
+      - AdminSeed__Username=${AdminSeed__Username:-NearU Admin}
+      - AdminSeed__Password=${AdminSeed__Password}
       # ── OSRM ──────────────────────────────────────────────────────────────
       # Note: Make sure port matches nearu-osrm internal container port (usually 5000)
       - OsrmSettings__BaseUrl=http://nearu-osrm:5000
