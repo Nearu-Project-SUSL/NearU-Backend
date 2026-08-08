@@ -9,8 +9,7 @@ public class CreateRideRequestDto
     [Required]
     public RideServiceType ServiceType { get; set; }
 
-    [Required]
-    public JsonElement Details { get; set; }
+    public JsonElement? Details { get; set; }
 
     [Range(-90, 90)]
     public double PickupLatitude { get; set; }

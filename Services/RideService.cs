@@ -112,7 +112,7 @@ public class RideService : IRideService
             Id = Guid.NewGuid().ToString(),
             StudentId = studentId,
             ServiceType = request.ServiceType,
-            Details = request.Details.GetRawText(),
+            Details = request.Details.HasValue ? request.Details.Value.GetRawText() : "{}",
             Status = RideRequestStatus.Pending,
             PickupLocation = pickup,
             DropoffLocation = dropoff,
