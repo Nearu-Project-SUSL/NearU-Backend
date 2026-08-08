@@ -537,7 +537,7 @@ public class RideService : IRideService
         };
     }
 
-    public async Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 5000, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 20000, CancellationToken cancellationToken = default)
     {
         var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
         if (riderStatus == null || !riderStatus.IsOnline || riderStatus.ApprovalStatus != RiderApprovalStatus.Approved)
