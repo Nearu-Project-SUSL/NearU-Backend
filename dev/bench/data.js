@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786001885965,
+  "lastUpdate": 1786246913532,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3310,6 +3310,58 @@ window.BENCHMARK_DATA = {
             "value": 386.9902801513672,
             "unit": "ns",
             "range": "± 5.818221089349173"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011",
+            "email": "tnirajaya2001@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "73e8e661a41316d28d74936635fe01f72a22f4e8",
+          "message": "Merge pull request #209 from Nearu-Project-SUSL/S3-Config\n\nchore: update default admin seed password in configuration files and environment templates",
+          "timestamp": "2026-08-07T08:00:44Z",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/73e8e661a41316d28d74936635fe01f72a22f4e8"
+        },
+        "date": 1786246913059,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7109.120198567708,
+            "unit": "ns",
+            "range": "± 16.705184841248137"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146616203.58333334,
+            "unit": "ns",
+            "range": "± 116879.99256511284"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14819.816823323568,
+            "unit": "ns",
+            "range": "± 136.22976914950527"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1264.7672602335613,
+            "unit": "ns",
+            "range": "± 11.246941135418904"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 451.1216724713643,
+            "unit": "ns",
+            "range": "± 2.3851736646612474"
           }
         ]
       }
