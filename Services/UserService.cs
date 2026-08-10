@@ -136,7 +136,7 @@ namespace NearU_Backend_Revised.Services
                 _dbContext.RiderStatuses.Add(riderStatus);
                 await _dbContext.SaveChangesAsync();
 
-                // Method A: Email Notification to Admins via SendGrid
+                // Method A: Email Notification to Admins via Resend
                 try
                 {
                     var adminEmail = _configuration["AdminSeed:Email"] ?? "admin@nearusab.me";

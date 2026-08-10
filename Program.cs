@@ -270,7 +270,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // Register repositories and services
-builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
 builder.Services.Configure<ResendSettings>(builder.Configuration.GetSection("Resend"));
 builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
 builder.Services.AddScoped<UserRepository>();
