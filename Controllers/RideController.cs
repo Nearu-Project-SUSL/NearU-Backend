@@ -185,7 +185,7 @@ public class RideController : ControllerBase
 
     [HttpGet("requests/nearby")]
     [Authorize(Policy = "RequireRider")] // Only riders can see nearby requests
-    public async Task<IActionResult> GetNearbyRequests([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] double radiusMeters = 5000, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetNearbyRequests([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] double radiusMeters = 20000, CancellationToken cancellationToken = default)
     {
         try
         {
