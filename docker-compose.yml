@@ -65,6 +65,8 @@ services:
       - Firebase__CredentialsPath=/app/firebase-adminsdk.json
       - SendGrid__ApiKey=${SendGrid__ApiKey}
       - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - Resend__ApiKey=${Resend__ApiKey}
+      - Resend__FromEmail=${Resend__FromEmail:-onboarding@resend.dev}
       - AdminSeed__Email=${AdminSeed__Email}
       - AdminSeed__Username=${AdminSeed__Username:-NearU Admin}
       - AdminSeed__Password=${AdminSeed__Password}
