@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786246913532,
+  "lastUpdate": 1786374337590,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3362,6 +3362,60 @@ window.BENCHMARK_DATA = {
             "value": 451.1216724713643,
             "unit": "ns",
             "range": "± 2.3851736646612474"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dbec410a6830f924e92b5b111b5181357673e06a",
+          "message": "Merge pull request #210 from Nearu-Project-SUSL/S3-Config\n\nfeat: implement ride service with request creation, state management,and DTO definitions",
+          "timestamp": "2026-08-10T20:34:21+05:30",
+          "tree_id": "f6bff57c84d11cc881ad98ddb71ffdabb4c76f6c",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/dbec410a6830f924e92b5b111b5181357673e06a"
+        },
+        "date": 1786374336509,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7480.433410644531,
+            "unit": "ns",
+            "range": "± 188.7036085479639"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165753334.66666666,
+            "unit": "ns",
+            "range": "± 43024.062526344875"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 11548.874791463217,
+            "unit": "ns",
+            "range": "± 1.8778042204184149"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1332.9842338562012,
+            "unit": "ns",
+            "range": "± 16.503277956555518"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 391.0896646976471,
+            "unit": "ns",
+            "range": "± 2.6924909783084883"
           }
         ]
       }
