@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786374337590,
+  "lastUpdate": 1786376105215,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3416,6 +3416,60 @@ window.BENCHMARK_DATA = {
             "value": 391.0896646976471,
             "unit": "ns",
             "range": "± 2.6924909783084883"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfe04e1c83a5306a2be00c6fa09504d3fdd24da8",
+          "message": "Merge pull request #211 from Nearu-Project-SUSL/S3-Config\n\nadd comprehensive project documentation and implement email service integration using Resend",
+          "timestamp": "2026-08-10T21:03:48+05:30",
+          "tree_id": "45ebf7d3f2ca9f13ea16707601ad3becc6af825b",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/bfe04e1c83a5306a2be00c6fa09504d3fdd24da8"
+        },
+        "date": 1786376103011,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7296.84851582845,
+            "unit": "ns",
+            "range": "± 24.785887320112252"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146775930.83333334,
+            "unit": "ns",
+            "range": "± 301474.75693314"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15734.231674194336,
+            "unit": "ns",
+            "range": "± 164.10608092687292"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1293.0480060577393,
+            "unit": "ns",
+            "range": "± 6.207030112811953"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 454.4002440770467,
+            "unit": "ns",
+            "range": "± 1.2323777471527477"
           }
         ]
       }
