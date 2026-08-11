@@ -91,9 +91,12 @@ public class RideService : IRideService
 
         var pickupInside  = IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters);
         var dropoffInside = IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters);
-        if (!pickupInside || !dropoffInside)
+        // At least one end of the trip must be within the operational zone.
+        // This allows rides from the city to campus (pickup outside, dropoff inside)
+        // and rides from campus to the city (pickup inside, dropoff outside).
+        if (!pickupInside && !dropoffInside)
         {
-            throw new InvalidOperationException($"Pickup and drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
+            throw new InvalidOperationException($"At least one of the pickup or drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
         }
 
         // Use OSRM for true road-network distance (falls back to Haversine on failure)
@@ -569,9 +572,12 @@ public class RideService : IRideService
         var pickup = CreatePoint(pickupLng, pickupLat);
         var dropoff = CreatePoint(dropoffLng, dropoffLat);
 
-        if (!IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters) || !IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters))
+        var pickupInRange  = IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters);
+        var dropoffInRange = IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters);
+        // At least one end of the trip must be within the operational zone.
+        if (!pickupInRange && !dropoffInRange)
         {
-            throw new InvalidOperationException($"Pickup and drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
+            throw new InvalidOperationException($"At least one of the pickup or drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
         }
 
         // Use OSRM for true road-network distance (falls back to Haversine on failure)
