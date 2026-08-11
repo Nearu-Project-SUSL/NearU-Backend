@@ -424,6 +424,8 @@ appsettings.*.json
 .env.*
 !.env.example
 !.env.template
+NearU_Rides_SRS_v2.pdf
+appsettings.json   
 
 # Untracked unwanted directories
 Migrations/code/

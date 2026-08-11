@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -38,6 +38,8 @@ public partial class User
     public string? City { get; set; }
 
     public string? DateOfBirth { get; set; }
+
+    public string? ProfilePictureUrl { get; set; }
 
     [InverseProperty("User")]
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

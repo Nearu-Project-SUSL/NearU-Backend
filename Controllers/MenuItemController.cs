@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.MenuItem;
 using NearU_Backend_Revised.Services.Interfaces;
@@ -37,6 +38,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Create(string shopId, [FromForm] CreateMenuItem request)
         {
@@ -47,6 +49,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(string shopId, string id, [FromForm] UpdateMenuItem request)
         {
@@ -65,6 +68,7 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Delete(string shopId, string id)
         {
             var deleted = await _service.DeleteItemAsync(id);

@@ -13,20 +13,25 @@ namespace NearU_Backend_Revised.Controllers
     {
         private readonly IJobService _jobservice;
         private readonly IImageService _imageService;
+        private readonly ILogger<JobController> _logger;
 
-        public JobController(IJobService jobservice, IImageService imageService)
+        public JobController(IJobService jobservice, IImageService imageService, ILogger<JobController> logger)
         {
             _jobservice = jobservice;
             _imageService = imageService;
+            _logger = logger;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllJobs()
+        public async Task<IActionResult> GetAllJobs([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var jobs = await _jobservice.GetAllJobsAsync();
-                return Ok(ApiResponse<IEnumerable<JobResponse>>.SuccessResponse("Jobs retrieved successfully", jobs));
+                if (page < 1) page = 1;
+                if (pageSize < 1 || pageSize > 100) pageSize = 10;
+
+                var result = await _jobservice.GetAllJobsAsync(page, pageSize);
+                return Ok(ApiResponse<PagedJobResponse>.SuccessResponse("Jobs retrieved successfully", result));
             }
             catch (Exception ex)
             {
@@ -110,7 +115,7 @@ namespace NearU_Backend_Revised.Controllers
             }
         }
         [HttpPost]
-        [Authorize]
+        [Authorize]  // Any authenticated user can post a job
         public async Task<IActionResult> CreateJob([FromBody] CreateJob dto)
         {
             try
@@ -127,11 +132,12 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Error creating job for userId={UserId}", User.FindFirstValue("userId"));
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
         [HttpPut("{id}")]
-        [Authorize]
+        [Authorize]  // Any authenticated user can update their own job
         public async Task<IActionResult> UpdateJob(string id, [FromBody] UpdateJob dto)
         {
             try
@@ -151,15 +157,16 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, ApiResponse<object>.FailResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Error updating job id={JobId}", id);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
         [HttpDelete("{id}")]
-        [Authorize]
+        [Authorize]  // Any authenticated user can delete their own job
         public async Task<IActionResult> DeleteJob(string id)
         {
             try
@@ -174,17 +181,19 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, ApiResponse<object>.FailResponse(ex.Message));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+                _logger.LogError(ex, "Error deleting job id={JobId}", id);
+                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
             }
         }
 
         [HttpPost("upload-logo")]
-        [Authorize]
-        public async Task<IActionResult> UploadLogo(IFormFile file)
+        [Authorize]  // Any authenticated user who can post jobs can upload a logo
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadLogo([FromForm] IFormFile file)
         {
             try
             {
@@ -200,7 +209,8 @@ namespace NearU_Backend_Revised.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<object>.FailResponse($"Upload failed: {ex.Message}"));
+                _logger.LogError(ex, "Error uploading job logo");
+                return StatusCode(500, ApiResponse<object>.FailResponse("Upload failed. Please try again."));
             }
         }
     }

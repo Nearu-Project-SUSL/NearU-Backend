@@ -15,5 +15,16 @@ namespace NearU_Backend_Revised.DTOs.Accommodation
         public DateTime CreatedAt { get; set; }
 
         public string? PhotoUrl { get; set; }
+
+        public string? Type { get; set; }
+
+        public decimal DistanceKm { get; set; }
+
+        public decimal MonthlyRent { get; set; }
+
+        public int AvailableBeds { get; set; }
+
+        // Returns amenities as a list for easy frontend consumption
+        public List<string> Amenities { get; set; } = new();
     }
 }

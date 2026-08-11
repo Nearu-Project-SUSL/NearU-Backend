@@ -7,6 +7,7 @@ namespace NearU_Backend_Revised.Repositories
 {
     public class JobRepository : IJobRepository
     {
+        private static readonly TimeSpan NewJobWindow = TimeSpan.FromHours(24);
         private readonly ApplicationDbContext _context;
 
         public JobRepository(ApplicationDbContext context)
@@ -14,19 +15,29 @@ namespace NearU_Backend_Revised.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Job>> GetAllJobsAsync()
+        public async Task<(IEnumerable<Job> Items, int TotalCount)> GetAllJobsAsync(int page, int pageSize)
         {
-            return await _context.Jobs
+            // Lightweight count — no JOIN needed
+            var totalCount = await _context.Jobs.CountAsync();
+
+            // Data query — only fetches the requested page with user info
+            var items = await _context.Jobs
                 .Include(j => j.PostedByUser)
                 .OrderByDescending(j => j.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<IEnumerable<Job>> GetNewJobsAsync()
         {
+            var cutoff = DateTime.UtcNow - NewJobWindow;
+
             return await _context.Jobs
                 .Include(j => j.PostedByUser)
-                .Where(j => j.IsNew)
+                .Where(j => j.IsNew && j.CreatedAt >= cutoff)
                 .OrderByDescending(j => j.CreatedAt)
                 .ToListAsync();
         }

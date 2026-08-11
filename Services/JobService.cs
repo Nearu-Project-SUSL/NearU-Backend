@@ -9,24 +9,50 @@ namespace NearU_Backend_Revised.Services
 {
     public class JobService : IJobService
     {
+        private static readonly TimeSpan NewJobWindow = TimeSpan.FromHours(24);
         private readonly IJobRepository _repository;
         private readonly UserRepository _userRepository;
+        private readonly ICacheService _cache;
 
-        public JobService(IJobRepository repository, UserRepository userRepository)
+        // Single cache key for the most recent full listing page (page 1, default size)
+        // Per-page caching would need keyed entries — keep it simple for now.
+        private const string JobListCacheKeyPrefix = "nearu:jobs:page";
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(3);
+
+        public JobService(IJobRepository repository, UserRepository userRepository, ICacheService cache)
         {
             _repository = repository;
             _userRepository = userRepository;
+            _cache = cache;
         }
-        public async Task<IEnumerable<JobResponse>> GetAllJobsAsync()
+
+        public async Task<PagedJobResponse> GetAllJobsAsync(int page, int pageSize)
         {
-            var jobs = await _repository.GetAllJobsAsync();
-            return jobs.Select(j => MapToResponse(j));
+            var cacheKey = $"{JobListCacheKeyPrefix}:{page}:{pageSize}";
+            var cached = await _cache.GetAsync<PagedJobResponse>(cacheKey);
+            if (cached is not null)
+                return cached;
+
+            var (jobs, totalCount) = await _repository.GetAllJobsAsync(page, pageSize);
+            var result = new PagedJobResponse
+            {
+                Items = jobs.Select(j => MapToResponse(j)),
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                CurrentPage = page,
+                PageSize = pageSize
+            };
+
+            await _cache.SetAsync(cacheKey, result, CacheTtl);
+            return result;
         }
+
         public async Task<IEnumerable<JobResponse>> GetNewJobsAsync()
         {
             var jobs = await _repository.GetNewJobsAsync();
             return jobs.Select(j => MapToResponse(j));
         }
+
         public async Task<IEnumerable<JobResponse>> GetJobsByCategoryAsync(string category)
         {
             var jobs = await _repository.GetJobsByCategoryAsync(category);
@@ -44,6 +70,7 @@ namespace NearU_Backend_Revised.Services
             var jobs = await _repository.SearchJobsAsync(searchTerm);
             return jobs.Select(j => MapToResponse(j));
         }
+
         public async Task<JobResponse?> GetJobByIdAsync(string id)
         {
             var job = await _repository.GetByIdAsync(id);
@@ -80,9 +107,12 @@ namespace NearU_Backend_Revised.Services
             };
 
             var created = await _repository.CreateAsync(job);
+
+            // Invalidate all paged cache entries (pages 1-5 covers typical use)
+            await InvalidateJobCacheAsync();
+
             return MapToResponse(created);
         }
-        //Update Created jobs
 
         public async Task<JobResponse?> UpdateJobAsync(string id, UpdateJob dto, string userId)
         {
@@ -109,6 +139,9 @@ namespace NearU_Backend_Revised.Services
 
             var updated = await _repository.UpdateAsync(job);
             if (updated == null) return null;
+
+            await InvalidateJobCacheAsync();
+
             return MapToResponse(updated);
         }
 
@@ -119,8 +152,28 @@ namespace NearU_Backend_Revised.Services
 
             if (job.PostedByUserId != userId)
                 throw new UnauthorizedAccessException("You can only delete your own job postings.");
-            return await _repository.DeleteAsync(id);
+
+            var result = await _repository.DeleteAsync(id);
+
+            await InvalidateJobCacheAsync();
+
+            return result;
         }
+
+        /// <summary>Removes cached pages 1–10 to cover typical browse usage.</summary>
+        private async Task InvalidateJobCacheAsync()
+        {
+            var tasks = new List<Task>();
+            for (int page = 1; page <= 10; page++)
+            {
+                foreach (var size in new[] { 10, 20, 50 })
+                {
+                    tasks.Add(_cache.RemoveAsync($"{JobListCacheKeyPrefix}:{page}:{size}"));
+                }
+            }
+            await Task.WhenAll(tasks);
+        }
+
         private static JobResponse MapToResponse(Job job)
         {
             var requirements = new List<string>();
@@ -149,7 +202,7 @@ namespace NearU_Backend_Revised.Services
                 LongDescription = job.LongDescription,
                 Requirements = requirements,
                 Tags = tags,
-                IsNew = job.IsNew,
+                IsNew = IsJobNew(job),
                 PostedBy = new PostedByInfo
                 {
                     UserId = job.PostedByUserId,
@@ -162,6 +215,12 @@ namespace NearU_Backend_Revised.Services
                 PostedAt = GetRelativeTime(job.CreatedAt)
             };
         }
+
+        private static bool IsJobNew(Job job)
+        {
+            return job.IsNew && DateTime.UtcNow - job.CreatedAt <= NewJobWindow;
+        }
+
         private static string GetRelativeTime(DateTime dateTime)
         {
             var timeSpan = DateTime.UtcNow - dateTime;
@@ -177,4 +236,3 @@ namespace NearU_Backend_Revised.Services
         }
     }
 }
-        

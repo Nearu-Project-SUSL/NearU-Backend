@@ -2,43 +2,64 @@ using NearU_Backend_Revised.Models;
 
 namespace NearU_Backend_Revised.Services
 {
-    /// <summary>
-    /// Interface for token generation services
-    /// </summary>
+    /// <summary>Interface for JWT generation, validation, and lifecycle management.</summary>
     public interface ITokenService
     {
-        /// <summary>
-        /// Generate a JWT access token for a user
-        /// </summary>
-        /// <param name="user">The user to generate token for</param>
-        /// <returns>JWT token string</returns>
+        // ── Generation ──────────────────────────────────────────────────────────────────
+
+        /// <summary>Generates a signed JWT access token for the given user.</summary>
         string GenerateAccessToken(User user);
 
-        /// <summary>
-        /// Generate a secure refresh token
-        /// </summary>
-        /// <returns>Refresh token entity</returns>
+        /// <summary>Generates a cryptographically-random, opaque refresh token.</summary>
         RefreshToken GenerateRefreshToken(string userId);
 
-        /// <summary>
-        /// Validate and extract claims from a JWT token
-        /// </summary>
-        /// <param name="token">JWT token to validate</param>
-        /// <returns>User ID if valid, null otherwise</returns>
+        // ── Validation ──────────────────────────────────────────────────────────────────
+
+        /// <summary>Validates a JWT and returns the userId claim, or null if invalid.</summary>
         string? ValidateAccessToken(string token);
 
-        /// <summary>
-        /// Validate a refresh token (check if exists, not expired, not revoked)
-        /// </summary>
-        /// <param name="token">Refresh token string to validate</param>
-        /// <returns>RefreshToken entity if valid, null otherwise</returns>
+        /// <summary>Validates an opaque refresh token (DB lookup — not expired, not revoked).</summary>
         Task<RefreshToken?> ValidateRefreshToken(string token);
 
-        /// <summary>
-        /// Rotate a refresh token (revoke old token and generate new one)
-        /// </summary>
-        /// <param name="oldToken">Old refresh token string to rotate</param>
-        /// <returns>New RefreshToken entity if successful, null otherwise</returns>
+        // ── Rotation ────────────────────────────────────────────────────────────────────
+
+        /// <summary>Revokes the old refresh token and issues a new one.</summary>
         Task<RefreshToken?> RotateRefreshToken(string oldToken);
+
+        // ── Per-device blacklist ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Adds the given JWT token ID (jti claim) to the Redis blacklist.
+        /// The entry is automatically expired after <paramref name="remaining"/> elapses.
+        /// Called on standard single-device logout.
+        /// </summary>
+        Task BlacklistTokenAsync(string jti, TimeSpan remaining);
+
+        /// <summary>Returns true when the given jti is on the Redis blacklist.</summary>
+        Task<bool> IsTokenBlacklistedAsync(string jti);
+
+        // ── Sign-Out-All-Devices ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Tracks the newly issued jti in the user's active-JTI Redis Set.
+        /// Called by <see cref="GenerateAccessToken"/> so that Sign-Out-All-Devices can
+        /// enumerate and revoke every outstanding token for a user.
+        /// </summary>
+        Task TrackActiveTokenAsync(string userId, string jti, TimeSpan tokenLifetime);
+
+        /// <summary>
+        /// Removes a single jti from the user's active-JTI Redis Set.
+        /// Called on per-device logout after the jti has been blacklisted, so that
+        /// Sign-Out-All-Devices does not attempt to re-blacklist an already-revoked token.
+        /// </summary>
+        Task RemoveActiveTokenAsync(string userId, string jti);
+
+        /// <summary>
+        /// Revokes every active access token for <paramref name="userId"/> by:
+        ///   1. Reading the user's JTI Set from Redis.
+        ///   2. Adding each jti to the blacklist.
+        ///   3. Deleting the Set.
+        /// </summary>
+        Task BlacklistAllUserTokensAsync(string userId, TimeSpan tokenLifetime);
     }
 }

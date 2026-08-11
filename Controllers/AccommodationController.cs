@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NearU_Backend_Revised.DTOs.Accommodation;
 using NearU_Backend_Revised.Services.Interfaces;
@@ -33,28 +34,45 @@ namespace NearU_Backend_Revised.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")] //accept form data for image upload not json
         public async Task<IActionResult> Create([FromForm] CreateAccommodation request)
         {
-            var accommodation = await _service.CreateAccommodationAsync(request);
+            try
+            {
+                var accommodation = await _service.CreateAccommodationAsync(request);
 
-            if (accommodation == null)
-                return StatusCode(500, new { message = "Failed to create accommodation" });
+                if (accommodation == null)
+                    return StatusCode(500, new { message = "Failed to create accommodation" });
 
-            return CreatedAtAction(nameof(GetById), new { id = accommodation.Id }, accommodation);
+                return CreatedAtAction(nameof(GetById), new { id = accommodation.Id }, accommodation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(string id, [FromForm] UpdateAccommodation request)
         {
-            var accommodation = await _service.UpdateAccommodationAsync(id, request);
-            if (accommodation == null)
-                return NotFound(new { message = "Accommodation not found" });
-            return Ok(accommodation);
+            try
+            {
+                var accommodation = await _service.UpdateAccommodationAsync(id, request);
+                if (accommodation == null)
+                    return NotFound(new { message = "Accommodation not found" });
+                return Ok(accommodation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "RequireBusinessOrAdmin")]
         public async Task<IActionResult> Delete(string id)
         {
             var deleted = await _service.DeleteAccommodationAsync(id);

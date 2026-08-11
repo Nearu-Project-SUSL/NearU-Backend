@@ -1,64 +1,94 @@
-using Imagekit;
-using Imagekit.Sdk;
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using NearU_Backend_Revised.Configuration;
 using NearU_Backend_Revised.Services.Interfaces;
-using NearU_Backend_Revised.Models;
 
 namespace NearU_Backend_Revised.Services
 {
+    /// <summary>
+    /// Uploads images directly to an AWS S3 bucket and returns the public URL.
+    /// Objects are stored under: {folder}/{guid}_{originalFileName}
+    /// ACL is set to public-read so uploaded URLs are immediately accessible.
+    /// </summary>
     public class ImageService : IImageService
     {
-        private readonly ImageKitSetting _settings;
+        private readonly S3Settings _s3;
+        private readonly ILogger<ImageService> _logger;
 
-        //allowed file types
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
-        private readonly string[] _allowedMimeTypes = { "image/jpeg", "image/png", "image/webp" };
-
-        //max file size = 5mb
-        private const long MaxFileSizeBytes = 5 * 1024 * 1024;
-
-        public ImageService(IOptions<ImageKitSetting> settings) //IOptions<ImageKitSetting> reads from appsetting auto
+        // Allowed MIME types — reject anything that isn't an image
+        private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
         {
-            _settings = settings.Value;
+            "image/jpeg", "image/jpg", "image/png", "image/gif",
+            "image/webp", "image/svg+xml", "image/avif"
+        };
+
+        // 10 MB hard limit per upload
+        private const long MaxFileSizeBytes = 10 * 1024 * 1024;
+
+        public ImageService(IOptions<S3Settings> s3Settings, ILogger<ImageService> logger)
+        {
+            _s3    = s3Settings.Value;
+            _logger = logger;
         }
 
-        public async Task<string> UploadImageAsync(IFormFile file, string folder)
+        public async Task<string?> UploadImageAsync(IFormFile file, string folder)
         {
+            if (file == null || file.Length == 0)
+                return null;
+
+            // ── Validation ────────────────────────────────────────────────────
             if (file.Length > MaxFileSizeBytes)
-                throw new InvalidOperationException("File size exceed 5MB limit");
+                throw new InvalidOperationException(
+                    $"File size {file.Length / 1024 / 1024:F1} MB exceeds the 10 MB limit.");
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!AllowedContentTypes.Contains(file.ContentType))
+                throw new InvalidOperationException(
+                    $"File type '{file.ContentType}' is not allowed. Only images are accepted.");
 
-            if (!_allowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
-                throw new InvalidOperationException("Invalid file type");
+            // ── Build a unique, safe S3 object key ────────────────────────────
+            var safeFileName = Path.GetFileName(file.FileName)   // strip any path components
+                                   .Replace(" ", "-");
+            var key = $"{folder.Trim('/')}/{Guid.NewGuid():N}_{safeFileName}";
 
+            // ── Upload to S3 ──────────────────────────────────────────────────
+            var credentials = new BasicAWSCredentials(_s3.AccessKey, _s3.SecretKey);
+            var region      = RegionEndpoint.GetBySystemName(_s3.Region);
 
-            using var memoryStream = new MemoryStream(); //convert file to raw bytes
+            using var s3Client = new AmazonS3Client(credentials, region);
+            using var stream   = file.OpenReadStream();
 
-            await file.CopyToAsync(memoryStream); //copy file contents to memory stream
-
-            var fileBytes = memoryStream.ToArray(); //convert memory stream to byte array
-
-            //create imagekit client
-            var imageKit = new ImagekitClient(
-                _settings.PublicKey,
-                _settings.PrivateKey,
-                _settings.UrlEndpoint
-                );
-
-            var fileName = $"{Guid.NewGuid()}{extension}"; //generate unique file name
-
-            var uploadRequest = new FileCreateRequest
+            var request = new PutObjectRequest
             {
-                file = fileBytes, //real file bytes
-                fileName = fileName, //filename in imagekit
-                folder = folder //folder in imagekit (which folder foodshop or menuitem)
+                BucketName  = _s3.BucketName,
+                Key         = key,
+                InputStream = stream,
+                ContentType = file.ContentType,
+                // Note: Do NOT set CannedACL here.
+                // Since April 2023, new S3 buckets have Object Ownership = "Bucket owner enforced"
+                // which disables ACLs entirely. Public access is controlled via a Bucket Policy.
             };
 
-            var result = await imageKit.UploadAsync(uploadRequest); //upload file to imagekit
+            try
+            {
+                await s3Client.PutObjectAsync(request);
+            }
+            catch (AmazonS3Exception ex)
+            {
+                _logger.LogError(ex,
+                    "S3 upload failed for key={Key} bucket={Bucket}: {Message}",
+                    key, _s3.BucketName, ex.Message);
+                throw new InvalidOperationException($"Image upload failed: {ex.Message}", ex);
+            }
 
-            return result.url; //return the URL of the uploaded image
+            // ── Build and return the public URL ───────────────────────────────
+            if (!string.IsNullOrWhiteSpace(_s3.CdnBaseUrl))
+                return $"{_s3.CdnBaseUrl.TrimEnd('/')}/{key}";
+
+            return $"https://{_s3.BucketName}.s3.{_s3.Region}.amazonaws.com/{key}";
         }
     }
 }

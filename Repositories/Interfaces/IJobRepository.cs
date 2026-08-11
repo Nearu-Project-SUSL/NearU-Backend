@@ -4,7 +4,7 @@ namespace NearU_Backend_Revised.Repositories.Interfaces
 {
     public interface IJobRepository
     {
-        Task<IEnumerable<Job>> GetAllJobsAsync();
+        Task<(IEnumerable<Job> Items, int TotalCount)> GetAllJobsAsync(int page, int pageSize);
         Task<IEnumerable<Job>> GetNewJobsAsync();
         Task<IEnumerable<Job>> GetJobsByCategoryAsync(string category);
         Task<IEnumerable<Job>> GetJobsByTypeAsync(string jobType);
