@@ -144,7 +144,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -156,7 +156,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
         ),
-        ClockSkew = TimeSpan.FromMinutes(5),
+        ClockSkew = TimeSpan.FromMinutes(1),
 
         RoleClaimType = ClaimTypes.Role,       
         NameClaimType = ClaimTypes.NameIdentifier  
@@ -477,6 +477,9 @@ app.MapScalarApiReference(options =>
            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
 });
 
+// HTTPS is handled at the Nginx reverse proxy level (nginx.conf HTTP→HTTPS redirect).
+// Do NOT call UseHttpsRedirection() here — the backend only receives HTTP from the
+// Nginx upstream and redirecting would cause redirect loops in production.
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
