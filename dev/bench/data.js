@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786473335484,
+  "lastUpdate": 1786554180362,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3578,6 +3578,60 @@ window.BENCHMARK_DATA = {
             "value": 399.5421754519145,
             "unit": "ns",
             "range": "± 0.8360798660349062"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e2fca16db7ac7b0927ab83dab80ffc032e13b507",
+          "message": "Merge pull request #215 from Nearu-Project-SUSL/S3-Config\n\nfeat: implement UserService for user registration and add migration to drop legacy business columns",
+          "timestamp": "2026-08-12T22:31:50+05:30",
+          "tree_id": "5469377e97c8c2edc85018f51cd31577ba02106a",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/e2fca16db7ac7b0927ab83dab80ffc032e13b507"
+        },
+        "date": 1786554179033,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7022.6502685546875,
+            "unit": "ns",
+            "range": "± 143.91059826236577"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146750893.5,
+            "unit": "ns",
+            "range": "± 459244.10548721254"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14873.318333943686,
+            "unit": "ns",
+            "range": "± 105.97185521771523"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1257.7411270141602,
+            "unit": "ns",
+            "range": "± 4.631563508570613"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 435.757449944814,
+            "unit": "ns",
+            "range": "± 3.760745032912858"
           }
         ]
       }
