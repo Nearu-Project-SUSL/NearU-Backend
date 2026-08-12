@@ -114,6 +114,7 @@ namespace NearU_Backend_Revised.Services
                     OwnerName    = request.OwnerName,
                     Phone        = request.MobileNumber ?? string.Empty,
                     Address      = request.Address      ?? string.Empty,
+                    Description  = request.Description  ?? string.Empty,
                     Status       = "Pending",
                     SubmittedAt  = DateTime.UtcNow
                 };
