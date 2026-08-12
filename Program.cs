@@ -380,8 +380,12 @@ using (var scope = app.Services.CreateScope())
                 );
             ");
 
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""RegistrationNumber"" DROP NOT NULL;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""ApplicationDataJson"" DROP NOT NULL;"); } catch { }
             try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" DROP COLUMN IF EXISTS ""RegistrationNumber"";"); } catch { }
             try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" DROP COLUMN IF EXISTS ""ApplicationDataJson"";"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP DEFAULT;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP IDENTITY IF EXISTS;"); } catch { }
             try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" TYPE text USING ""Id""::text;"); } catch { }
             try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""FoodShops"" ADD COLUMN IF NOT EXISTS ""OwnerId"" text;"); } catch { }
         }

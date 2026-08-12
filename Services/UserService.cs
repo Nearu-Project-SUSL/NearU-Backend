@@ -162,9 +162,48 @@ namespace NearU_Backend_Revised.Services
                     SubmittedAt  = DateTime.UtcNow
                 };
 
-                _dbContext.BusinessApplications.Add(application);
-                await _dbContext.SaveChangesAsync();
+                try
+                {
+                    _dbContext.BusinessApplications.Add(application);
+                    await _dbContext.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "EF Core SaveChanges for BusinessApplication failed, executing raw SQL fallback...");
 
+                    try
+                    {
+                        await _dbContext.Database.ExecuteSqlRawAsync(@"
+                            CREATE TABLE IF NOT EXISTS ""BusinessApplications"" (
+                                ""Id"" text NOT NULL,
+                                ""UserId"" text NOT NULL,
+                                ""BusinessType"" text NOT NULL,
+                                ""BusinessName"" text NOT NULL,
+                                ""OwnerName"" text NOT NULL,
+                                ""Phone"" text NOT NULL,
+                                ""Address"" text NOT NULL,
+                                ""Description"" text NOT NULL,
+                                ""Status"" text NOT NULL DEFAULT 'Pending',
+                                ""SubmittedAt"" timestamp with time zone NOT NULL,
+                                CONSTRAINT ""PK_BusinessApplications"" PRIMARY KEY (""Id"")
+                            );
+                        ");
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""RegistrationNumber"" DROP NOT NULL;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""ApplicationDataJson"" DROP NOT NULL;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP DEFAULT;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP IDENTITY IF EXISTS;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" TYPE text USING ""Id""::text;"); } catch { }
+                    }
+                    catch { }
+
+                    await _dbContext.Database.ExecuteSqlRawAsync(@"
+                        INSERT INTO ""BusinessApplications"" (""Id"", ""UserId"", ""BusinessType"", ""BusinessName"", ""OwnerName"", ""Phone"", ""Address"", ""Description"", ""Status"", ""SubmittedAt"")
+                        VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9});
+                    ",
+                    application.Id, application.UserId, application.BusinessType, application.BusinessName,
+                    application.OwnerName, application.Phone, application.Address, application.Description,
+                    application.Status, application.SubmittedAt);
+                }
             }
 
             // FIX: Initialize RiderStatus immediately upon registration

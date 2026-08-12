@@ -78,7 +78,8 @@ namespace NearU_Backend_Revised.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unhandled error during registration for email={Email}", request.Email);
-                return StatusCode(500, ApiResponse<object>.FailResponse("An unexpected error occurred. Please try again."));
+                var innerMsg = ex.InnerException != null ? $" -> {ex.InnerException.Message}" : string.Empty;
+                return StatusCode(500, ApiResponse<object>.FailResponse($"Registration failed: {ex.Message}{innerMsg}"));
             }
         }
 
