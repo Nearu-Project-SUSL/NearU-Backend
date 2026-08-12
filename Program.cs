@@ -87,16 +87,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin =>
-              {
-                  return origin.StartsWith("http://localhost") ||
-                         origin.StartsWith("https://localhost") ||
-                         origin == "https://near-u-frontend-pi.vercel.app" ||
-                         origin.EndsWith(".vercel.app") ||
-                         origin == "https://nearusab.me" ||
-                         origin == "https://www.nearusab.me" ||
-                         origin == "https://api.nearusab.me";
-              })
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -529,9 +520,11 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+// Enable CORS BEFORE routing and rate limiting so all responses (including errors & rejections) include CORS headers
+app.UseCors("AllowFrontend");
+
 app.UseRouting();
 
-app.UseCors("AllowFrontend");
 // Distributed IP rate limiting (AspNetCoreRateLimit — Redis-backed in production)
 app.UseIpRateLimiting();
 app.UseRateLimiter();

@@ -59,7 +59,50 @@ namespace NearU_Backend_Revised.Services
         public async Task<User> Register(RegisterRequest request)
         {
             var existingUser = await _userRepo.GetUserByEmail(request.Email);
-            if (existingUser != null) throw new Exception("User already exists");
+            if (existingUser != null)
+            {
+                // Self-healing: If user exists as Business but has no application (e.g. from an earlier failed attempt), create the application for them
+                if (existingUser.Role == "Business")
+                {
+                    var existingApp = await _dbContext.BusinessApplications.FirstOrDefaultAsync(a => a.UserId == existingUser.Id);
+                    if (existingApp == null)
+                    {
+                        if (string.IsNullOrWhiteSpace(request.BusinessType) ||
+                            string.IsNullOrWhiteSpace(request.BusinessName) ||
+                            string.IsNullOrWhiteSpace(request.OwnerName))
+                        {
+                            throw new Exception("BusinessType, BusinessName, and OwnerName are required for business registration.");
+                        }
+
+                        var allowedTypes = new[] { "Food", "Accommodation", "CustomGifts" };
+                        if (!allowedTypes.Contains(request.BusinessType, StringComparer.OrdinalIgnoreCase))
+                        {
+                            throw new Exception($"BusinessType must be one of: {string.Join(", ", allowedTypes)}");
+                        }
+
+                        var app = new BusinessApplication
+                        {
+                            Id           = Guid.NewGuid().ToString(),
+                            UserId       = existingUser.Id,
+                            BusinessType = request.BusinessType,
+                            BusinessName = request.BusinessName,
+                            OwnerName    = request.OwnerName,
+                            Phone        = request.MobileNumber ?? existingUser.MobileNumber ?? string.Empty,
+                            Address      = request.Address      ?? existingUser.Address      ?? string.Empty,
+                            Description  = request.Description  ?? string.Empty,
+                            Status       = "Pending",
+                            SubmittedAt  = DateTime.UtcNow
+                        };
+
+                        _dbContext.BusinessApplications.Add(app);
+                        await _dbContext.SaveChangesAsync();
+
+                        return existingUser;
+                    }
+                }
+
+                throw new Exception("User already exists");
+            }
 
             // Service-layer guard: Admin accounts cannot be created via self-registration.
             // The DTO regex already blocks this, but we enforce it here too for defense-in-depth.
