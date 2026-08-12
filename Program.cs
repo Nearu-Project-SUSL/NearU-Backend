@@ -370,6 +370,44 @@ using (var scope = app.Services.CreateScope())
         }
 
         // 2. NOW raw SQL & seeding can safely run!
+        // Ensure BusinessApplications table and columns match current models
+        dbContext.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""BusinessApplications"" (
+                ""Id"" text NOT NULL,
+                ""UserId"" text NOT NULL,
+                ""BusinessType"" text NOT NULL,
+                ""BusinessName"" text NOT NULL,
+                ""OwnerName"" text NOT NULL,
+                ""Phone"" text NOT NULL,
+                ""Address"" text NOT NULL,
+                ""Description"" text NOT NULL,
+                ""Status"" text NOT NULL DEFAULT 'Pending',
+                ""SubmittedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_BusinessApplications"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_BusinessApplications_Users_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+            );
+
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'BusinessApplications' AND column_name = 'RegistrationNumber') THEN
+                    ALTER TABLE ""BusinessApplications"" DROP COLUMN ""RegistrationNumber"";
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'BusinessApplications' AND column_name = 'ApplicationDataJson') THEN
+                    ALTER TABLE ""BusinessApplications"" DROP COLUMN ""ApplicationDataJson"";
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'BusinessApplications' AND column_name = 'Id' AND data_type = 'integer') THEN
+                    ALTER TABLE ""BusinessApplications"" DROP CONSTRAINT IF EXISTS ""FK_BusinessApplications_Users_UserId"";
+                    ALTER TABLE ""BusinessApplications"" DROP CONSTRAINT IF EXISTS ""PK_BusinessApplications"";
+                    ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" TYPE text USING ""Id""::text;
+                    ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP DEFAULT;
+                    ALTER TABLE ""BusinessApplications"" ADD CONSTRAINT ""PK_BusinessApplications"" PRIMARY KEY (""Id"");
+                    ALTER TABLE ""BusinessApplications"" ADD CONSTRAINT ""FK_BusinessApplications_Users_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE;
+                END IF;
+            END $$;
+
+            ALTER TABLE ""FoodShops"" ADD COLUMN IF NOT EXISTS ""OwnerId"" text;
+        ");
+
         // Ensure GiftShop tables exist in case EF Migrations History is out of sync
         dbContext.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""GiftShops"" (
