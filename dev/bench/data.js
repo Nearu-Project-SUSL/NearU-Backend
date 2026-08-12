@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786554180362,
+  "lastUpdate": 1786560405294,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3632,6 +3632,60 @@ window.BENCHMARK_DATA = {
             "value": 435.757449944814,
             "unit": "ns",
             "range": "± 3.760745032912858"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "49fe0114b89db453de794011062449ca944d9385",
+          "message": "Merge pull request #218 from Nearu-Project-SUSL/S3-Config\n\nfeat: implement UserService for user registration and add wildcard CORS configuration",
+          "timestamp": "2026-08-13T00:15:27+05:30",
+          "tree_id": "2df697bc2eb6cbdf69f75a1e40b7dd1c4120964b",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/49fe0114b89db453de794011062449ca944d9385"
+        },
+        "date": 1786560404209,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7804.708607991536,
+            "unit": "ns",
+            "range": "± 154.47544028940746"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 146453878.75,
+            "unit": "ns",
+            "range": "± 35906.68752823073"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 15085.190556844076,
+            "unit": "ns",
+            "range": "± 62.801275377635676"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1398.7620118459065,
+            "unit": "ns",
+            "range": "± 6.1657177920336235"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 444.70212539037067,
+            "unit": "ns",
+            "range": "± 5.63283772076284"
           }
         ]
       }
