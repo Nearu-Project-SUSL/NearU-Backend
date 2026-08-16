@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786562048327,
+  "lastUpdate": 1786849162619,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3740,6 +3740,58 @@ window.BENCHMARK_DATA = {
             "value": 462.0842315355937,
             "unit": "ns",
             "range": "± 0.8547446016682554"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011",
+            "email": "tnirajaya2001@gmail.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "98b66476d9ad6d2c288559006e62783fd2e80d71",
+          "message": "Merge pull request #220 from Nearu-Project-SUSL/S3-Config\n\nfeat: implement AuthController and UserService with comprehensive authentication, registration, and password reset functionality",
+          "timestamp": "2026-08-12T19:12:49Z",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/98b66476d9ad6d2c288559006e62783fd2e80d71"
+        },
+        "date": 1786849160986,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7328.234278361003,
+            "unit": "ns",
+            "range": "± 41.063766403946346"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 165683041.08333334,
+            "unit": "ns",
+            "range": "± 175934.56569743715"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 11446.60767618815,
+            "unit": "ns",
+            "range": "± 47.36038476956819"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1326.2567761739094,
+            "unit": "ns",
+            "range": "± 10.93743778314014"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 387.70141855875653,
+            "unit": "ns",
+            "range": "± 2.1094772773566244"
           }
         ]
       }
