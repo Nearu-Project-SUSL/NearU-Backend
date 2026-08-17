@@ -36,12 +36,19 @@ public class RideNotificationService : IRideNotificationService
 
         var payload = new
         {
-            rideId      = rideRequest.Id,
-            status      = rideRequest.Status.ToString(),
-            updatedAtUtc = rideRequest.UpdatedAt,
-            otp          = rideRequest.Status.ToString() == "Accepted" ? rideRequest.OTP : null,
-            otpExpiresAt = rideRequest.Status.ToString() == "Accepted" ? rideRequest.OtpExpiresAt : (DateTime?)null,
-
+            rideId                  = rideRequest.Id,
+            status                  = rideRequest.Status.ToString(),
+            updatedAtUtc            = rideRequest.UpdatedAt,
+            otp                     = rideRequest.Status.ToString() == "Accepted" ? rideRequest.OTP : null,
+            otpExpiresAt            = rideRequest.Status.ToString() == "Accepted" ? rideRequest.OtpExpiresAt : (DateTime?)null,
+            riderId                 = rideRequest.RiderId,
+            riderName               = rideRequest.Rider?.Username,
+            riderPhoneNumber        = rideRequest.Rider?.MobileNumber,
+            riderProfilePictureUrl  = rideRequest.Rider?.ProfilePictureUrl,
+            studentId               = rideRequest.StudentId,
+            studentName             = rideRequest.Student?.Username,
+            studentPhoneNumber      = rideRequest.Student?.MobileNumber,
+            studentProfilePictureUrl = rideRequest.Student?.ProfilePictureUrl
         };
 
         // 1. Broadcast to the ride channel (clients that already called JoinRideChannel)

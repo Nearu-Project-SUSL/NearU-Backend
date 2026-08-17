@@ -70,6 +70,8 @@ public class RideService : IRideService
         };
 
         var ride = await _dbContext.RideRequests
+            .Include(r => r.Student)
+            .Include(r => r.Rider)
             .Where(r =>
                 (r.StudentId == userId || r.RiderId == userId) &&
                 !terminalStatuses.Contains(r.Status))
@@ -211,6 +213,11 @@ public class RideService : IRideService
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
+            // Load Student and Rider references for SignalR payload & summary
+            await _dbContext.Entry(lockedRide).Reference(r => r.Student).LoadAsync(cancellationToken);
+            await _dbContext.Entry(lockedRide).Reference(r => r.Rider).LoadAsync(cancellationToken);
+
             await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
 
             return MapSummary(lockedRide);
@@ -551,6 +558,7 @@ public class RideService : IRideService
         var point = CreatePoint(longitude, latitude);
 
         var pendingRides = await _dbContext.RideRequests
+            .Include(r => r.Student)
             .Where(r => r.Status == RideRequestStatus.Pending)
             .Where(r => r.PickupLocation.Distance(point) <= radiusMeters)
             .OrderBy(r => r.PickupLocation.Distance(point))
@@ -662,8 +670,11 @@ public class RideService : IRideService
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
 
-        if(ride.Status != RideRequestStatus.InProgress)
-            throw new InvalidOperationException("Ride must be in progress to mark as complete.");
+        if (ride.Status != RideRequestStatus.InProgress)
+        {
+            throw new InvalidOperationException(
+                $"Ride cannot be marked complete because its current status is '{ride.Status}'. The ride must be 'InProgress' (OTP must be verified first).");
+        }
 
         ride.Status = RideRequestStatus.CompletedByRider;
         ride.UpdatedAt = DateTime.UtcNow;
@@ -696,6 +707,8 @@ public class RideService : IRideService
     public async Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
     {
         var ride = await _dbContext.RideRequests
+            .Include(r => r.Student)
+            .Include(r => r.Rider)
             .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
 
         if (ride is null || ride.StudentId != studentId)
@@ -761,6 +774,8 @@ public class RideService : IRideService
     public async Task<RideSummaryDto?> GetRideStatusAsync(string userId, string rideId, CancellationToken cancellationToken = default)
     {
         var ride = await _dbContext.RideRequests
+            .Include(r => r.Student)
+            .Include(r => r.Rider)
             .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
 
         if (ride is null) return null;
@@ -773,7 +788,8 @@ public class RideService : IRideService
 
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
-        var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
+        var ride = await _dbContext.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
             ?? throw new InvalidOperationException("Ride request not found.");
         if (ride.RiderId != riderId)
         {
@@ -791,7 +807,13 @@ public class RideService : IRideService
             Status = ride.Status,
             ServiceType = ride.ServiceType,
             StudentId = ride.StudentId,
+            StudentName = ride.Student?.Username,
+            StudentPhoneNumber = ride.Student?.MobileNumber,
+            StudentProfilePictureUrl = ride.Student?.ProfilePictureUrl,
             RiderId = ride.RiderId,
+            RiderName = ride.Rider?.Username,
+            RiderPhoneNumber = ride.Rider?.MobileNumber,
+            RiderProfilePictureUrl = ride.Rider?.ProfilePictureUrl,
             EstimatedFare = ride.EstimatedFare,
             DistanceKm = ride.CalculatedDistance,
             // PostGIS uses (X=Longitude, Y=Latitude) convention
