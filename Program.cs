@@ -100,7 +100,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("login-limit", options =>
     {
-        options.PermitLimit = 5;
+        options.PermitLimit = 10;
         options.Window = TimeSpan.FromMinutes(15);
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         options.QueueLimit = 0;
