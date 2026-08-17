@@ -14,11 +14,13 @@ public class RideController : ControllerBase
 {
     private readonly IRideService _rideService;
     private readonly IFcmTokenService _fcmTokenService;
+    private readonly ILogger<RideController> _logger;
 
-    public RideController(IRideService rideService, IFcmTokenService fcmTokenService)
+    public RideController(IRideService rideService, IFcmTokenService fcmTokenService, ILogger<RideController> logger)
     {
         _rideService = rideService;
         _fcmTokenService = fcmTokenService;
+        _logger = logger;
     }
 
     // ─── FCM Device Token ────────────────────────────────────────────────────────
@@ -179,6 +181,7 @@ public class RideController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to create ride request: {Message}", ex.Message);
             return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
         }
     }
