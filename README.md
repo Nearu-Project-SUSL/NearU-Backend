@@ -196,10 +196,11 @@ The raw OpenAPI 3.0 document is served as JSON at:
 **Group 11 – Faculty of Computing**  
 *Sabaragamuwa University of Sri Lanka*
 
-- **K.W.T.N. Keerthiwansha** – Full Stack Developer & System Architect  
+- **K.W.T.N. Keerthiwansha** – AWS deployment, CI/CD pipelines, cloud infrastructure, monitoring and full stack development
 - **W.T.M.B. Wijesuriya** – Frontend Developer & UI/UX Designer  
-- **K.V.P. Pahasara** – Cloud & DevOps Engineer  
-- **M.U. Heshan** – QA Engineer & Project Manager  
+- **K.V.P. Pahasara** – Backend API development, database design, system architecture, integration
+- **M.U. Heshan** – Testing, documentation, sprint coordination, quality assurance
+
 
 ---
 
