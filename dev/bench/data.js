@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786849162619,
+  "lastUpdate": 1786972868361,
   "repoUrl": "https://github.com/Nearu-Project-SUSL/NearU-Backend",
   "entries": {
     "Benchmark": [
@@ -3792,6 +3792,60 @@ window.BENCHMARK_DATA = {
             "value": 387.70141855875653,
             "unit": "ns",
             "range": "± 2.1094772773566244"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tnirajaya2001@gmail.com",
+            "name": "Niranjaya Keerthiwansha",
+            "username": "thimira20011"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3d5f5c60bb8f67385ca165dade4bfadc6db83416",
+          "message": "Merge pull request #221 from Nearu-Project-SUSL/S3-Config\n\nfeat: increase login rate limit permit from 5 to 10 in Program.cs and appsettings.json",
+          "timestamp": "2026-08-17T18:49:54+05:30",
+          "tree_id": "a5e626c73c3cc65ba3808a9740258e793a29eb0f",
+          "url": "https://github.com/Nearu-Project-SUSL/NearU-Backend/commit/3d5f5c60bb8f67385ca165dade4bfadc6db83416"
+        },
+        "date": 1786972866364,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "NearUPerformanceBenchmarks.GenerateJwtToken",
+            "value": 7899.531036376953,
+            "unit": "ns",
+            "range": "± 64.8169092748758"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.VerifyPassword",
+            "value": 145350987.83333334,
+            "unit": "ns",
+            "range": "± 12286.926917798986"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.SerialiseAccommodationList",
+            "value": 14492.485488891602,
+            "unit": "ns",
+            "range": "± 21.485326075618968"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.FilterActiveAccommodations",
+            "value": 1262.0713380177815,
+            "unit": "ns",
+            "range": "± 5.26053981870249"
+          },
+          {
+            "name": "NearUPerformanceBenchmarks.DeserialiseAccommodation",
+            "value": 393.23923110961914,
+            "unit": "ns",
+            "range": "± 0.7149459934852905"
           }
         ]
       }
