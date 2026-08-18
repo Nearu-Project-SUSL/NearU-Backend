@@ -18,10 +18,17 @@ using NearU_Backend_Revised.Services.Interfaces;
 using NearU_Backend_Revised.Middleware;
 using AspNetCoreRateLimit;
 using System.Security.Claims;
+using Scalar.AspNetCore;
+
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         options.InvalidModelStateResponseFactory = context =>
@@ -35,7 +42,48 @@ builder.Services.AddControllers()
             return new BadRequestObjectResult(response);
         };
     });
-builder.Services.AddOpenApi();
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info.Title = "NearU API";
+        document.Info.Version = "v1";
+        document.Info.Description = "The core backend RESTful API powering the NearU platform: A University Lifestyle Hub and Local Business Marketplace.";
+        
+        // Add JWT Bearer Security Scheme
+        var securityScheme = new Microsoft.OpenApi.OpenApiSecurityScheme
+        {
+            Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+            Name = "Authorization",
+            In = Microsoft.OpenApi.ParameterLocation.Header,
+            Scheme = "Bearer",
+            BearerFormat = "JWT",
+            Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+        };
+        document.Components ??= new Microsoft.OpenApi.OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes!.Add("Bearer", securityScheme);
+        
+        return Task.CompletedTask;
+    });
+
+    options.AddOperationTransformer((operation, context, cancellationToken) =>
+    {
+        var metadata = context.Description.ActionDescriptor.EndpointMetadata;
+        if (metadata.OfType<Microsoft.AspNetCore.Authorization.IAuthorizeData>().Any())
+        {
+            operation.Security = new List<Microsoft.OpenApi.OpenApiSecurityRequirement>
+            {
+                new()
+                {
+                    [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer")] = new List<string>()
+                }
+            };
+        }
+        return Task.CompletedTask;
+    });
+});
 
 // Health checks — used by the Docker Compose healthcheck directive
 builder.Services.AddHealthChecks();
@@ -45,16 +93,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin =>
-              {
-                  return origin.StartsWith("http://localhost") ||
-                         origin.StartsWith("https://localhost") ||
-                         origin == "https://near-u-frontend-pi.vercel.app" ||
-                         origin.EndsWith(".vercel.app") ||
-                         origin == "https://nearusab.me" ||
-                         origin == "https://www.nearusab.me" ||
-                         origin == "https://api.nearusab.me";
-              })
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -67,7 +106,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("login-limit", options =>
     {
-        options.PermitLimit = 5;
+        options.PermitLimit = 10;
         options.Window = TimeSpan.FromMinutes(15);
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         options.QueueLimit = 0;
@@ -102,7 +141,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -114,7 +153,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings?.SecretKey ?? "")
         ),
-        ClockSkew = TimeSpan.FromMinutes(5),
+        ClockSkew = TimeSpan.FromMinutes(1),
 
         RoleClaimType = ClaimTypes.Role,       
         NameClaimType = ClaimTypes.NameIdentifier  
@@ -170,15 +209,14 @@ builder.Services.AddAuthorization(options =>
         policy.RequireAuthenticatedUser().RequireRole(UserRoles.Business, UserRoles.Admin));
 });
 
-builder.Services.Configure<ImageKitSettings>(
-    builder.Configuration.GetSection("ImageKit"));
+builder.Services.Configure<S3Settings>(
+    builder.Configuration.GetSection("AWS"));
 
 // Food feature
 builder.Services.AddScoped<IFoodShopRepository, FoodShopRepository>();
 builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
 builder.Services.AddScoped<IFoodShopService, FoodShopService>();
 builder.Services.AddScoped<IMenuItemService, MenuItemService>();
-builder.Services.AddHttpClient();
 builder.Services.AddScoped<IImageService, ImageService>();
 
 //testimonial
@@ -192,10 +230,22 @@ builder.Services.AddScoped<IAccommodationItemRepository, AccommodationItemReposi
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
 builder.Services.AddScoped<IAccommodationItemService, AccommodationItemService>();
 
+//Transport 
+builder.Services.AddScoped<ITukTukDriverRepository, TukTukDriverRepository>();
+builder.Services.AddScoped<IBusRouteRepository, BusRouteRepository>();
+builder.Services.AddScoped<ITrainRouteRepository, TrainRouteRepository>();
+builder.Services.AddScoped<ITukTukDriverService, TukTukDriverService>();
+builder.Services.AddScoped<IBusRouteService, BusRouteService>();
+builder.Services.AddScoped<ITrainRouteService, TrainRouteService>();
+
 
 // Gift feature
 builder.Services.AddScoped<IGiftShopRepository, GiftShopRepository>();
 builder.Services.AddScoped<IGiftShopService, GiftShopService>();
+
+// Photography feature
+builder.Services.AddScoped<IPhotographerRepository, PhotographerRepository>();
+builder.Services.AddScoped<IPhotographerService, PhotographerService>();
 
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
@@ -217,8 +267,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // Register repositories and services
-builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
-builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.Configure<ResendSettings>(builder.Configuration.GetSection("Resend"));
+builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<UserService>();
@@ -303,11 +353,12 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<ApplicationDbContext>();
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
         
+        // 1. MUST BE FIRST: Apply EF Core Migrations to create 'Users' and other tables
         try
         {
-            context.Database.Migrate();
+            await dbContext.Database.MigrateAsync();
         }
         catch (Exception ex)
         {
@@ -315,8 +366,43 @@ using (var scope = app.Services.CreateScope())
             logger.LogWarning(ex, "Database migration failed (possibly due to missing PostGIS extension locally). Continuing with fallback table creation...");
         }
 
+        // 2. NOW raw SQL & seeding can safely run!
+        try
+        {
+            dbContext.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""BusinessApplications"" (
+                    ""Id"" text NOT NULL,
+                    ""UserId"" text NOT NULL,
+                    ""BusinessType"" text NOT NULL,
+                    ""BusinessName"" text NOT NULL,
+                    ""OwnerName"" text NOT NULL,
+                    ""Phone"" text NOT NULL,
+                    ""Address"" text NOT NULL,
+                    ""Description"" text NOT NULL,
+                    ""Status"" text NOT NULL DEFAULT 'Pending',
+                    ""SubmittedAt"" timestamp with time zone NOT NULL,
+                    CONSTRAINT ""PK_BusinessApplications"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_BusinessApplications_Users_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+                );
+            ");
+
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""RegistrationNumber"" DROP NOT NULL;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""ApplicationDataJson"" DROP NOT NULL;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" DROP COLUMN IF EXISTS ""RegistrationNumber"";"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" DROP COLUMN IF EXISTS ""ApplicationDataJson"";"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP DEFAULT;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP IDENTITY IF EXISTS;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" TYPE text USING ""Id""::text;"); } catch { }
+            try { dbContext.Database.ExecuteSqlRaw(@"ALTER TABLE ""FoodShops"" ADD COLUMN IF NOT EXISTS ""OwnerId"" text;"); } catch { }
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(ex, "BusinessApplications table initialization non-fatal warning");
+        }
+
         // Ensure GiftShop tables exist in case EF Migrations History is out of sync
-        context.Database.ExecuteSqlRaw(@"
+        dbContext.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS ""GiftShops"" (
                 ""Id"" uuid NOT NULL,
                 ""Name"" character varying(150) NOT NULL,
@@ -345,9 +431,63 @@ using (var scope = app.Services.CreateScope())
             );
 
             CREATE INDEX IF NOT EXISTS ""IX_GiftProducts_GiftShopId"" ON ""GiftProducts"" (""GiftShopId"");
+
+            CREATE TABLE IF NOT EXISTS ""Deals"" (
+                ""Id"" text NOT NULL,
+                ""ShopName"" character varying(100) NOT NULL,
+                ""ShopType"" character varying(50) NOT NULL,
+                ""Title"" character varying(150) NOT NULL,
+                ""Description"" character varying(1000) NOT NULL,
+                ""BadgeText"" character varying(50) NOT NULL,
+                ""BadgeColor"" character varying(20) NOT NULL,
+                ""ImageUrl"" character varying(500),
+                ""ValidFrom"" timestamp with time zone,
+                ""ValidTo"" timestamp with time zone,
+                ""SubmittedByUserId"" text NOT NULL,
+                ""ApprovalStatus"" character varying(50) NOT NULL DEFAULT 'Pending',
+                ""RejectionReason"" character varying(500),
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_Deals"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_Deals_Users_SubmittedByUserId"" FOREIGN KEY (""SubmittedByUserId"") REFERENCES ""Users"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_Deals_SubmittedByUserId"" ON ""Deals"" (""SubmittedByUserId"");
         ");
 
-        // Seed the initial Admin account from configuration
+        dbContext.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""Photographers"" (
+                ""Id"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""Bio"" character varying(500),
+                ""BaseRatePerHour"" numeric(18,2) NOT NULL,
+                ""LocationName"" character varying(150) NOT NULL,
+                ""Phone"" character varying(20) NOT NULL,
+                ""Email"" character varying(150),
+                ""ImageUrl"" character varying(500),
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                ""OwnerId"" text,
+                CONSTRAINT ""PK_Photographers"" PRIMARY KEY (""Id"")
+            );
+
+            CREATE TABLE IF NOT EXISTS ""PhotographyPackages"" (
+                ""Id"" uuid NOT NULL,
+                ""PhotographerId"" uuid NOT NULL,
+                ""Name"" character varying(150) NOT NULL,
+                ""Price"" numeric(18,2) NOT NULL,
+                ""Description"" character varying(300),
+                ""IsActive"" boolean NOT NULL DEFAULT TRUE,
+                ""CreatedAt"" timestamp with time zone NOT NULL,
+                ""UpdatedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""PK_PhotographyPackages"" PRIMARY KEY (""Id""),
+                CONSTRAINT ""FK_PhotographyPackages_Photographers_PhotographerId"" FOREIGN KEY (""PhotographerId"") REFERENCES ""Photographers"" (""Id"") ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS ""IX_PhotographyPackages_PhotographerId"" ON ""PhotographyPackages"" (""PhotographerId"");
+        ");
+
+        // Your seeding logic follows here...
         var seeder = services.GetRequiredService<AdminSeederService>();
         await seeder.SeedAsync();
     }
@@ -359,11 +499,18 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-if (app.Environment.IsDevelopment())
+// Map OpenAPI document and Scalar API Reference UI globally (enabled in production)
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
 {
-    app.MapOpenApi();
-}
+    options.WithTitle("NearU API Documentation")
+           .WithTheme(ScalarTheme.Purple)
+           .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+});
 
+// HTTPS is handled at the Nginx reverse proxy level (nginx.conf HTTP→HTTPS redirect).
+// Do NOT call UseHttpsRedirection() here — the backend only receives HTTP from the
+// Nginx upstream and redirecting would cause redirect loops in production.
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
@@ -375,9 +522,11 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+// Enable CORS BEFORE routing and rate limiting so all responses (including errors & rejections) include CORS headers
+app.UseCors("AllowFrontend");
+
 app.UseRouting();
 
-app.UseCors("AllowFrontend");
 // Distributed IP rate limiting (AspNetCoreRateLimit — Redis-backed in production)
 app.UseIpRateLimiting();
 app.UseRateLimiter();

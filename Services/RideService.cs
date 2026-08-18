@@ -70,6 +70,8 @@ public class RideService : IRideService
         };
 
         var ride = await _dbContext.RideRequests
+            .Include(r => r.Student)
+            .Include(r => r.Rider)
             .Where(r =>
                 (r.StudentId == userId || r.RiderId == userId) &&
                 !terminalStatuses.Contains(r.Status))
@@ -91,9 +93,12 @@ public class RideService : IRideService
 
         var pickupInside  = IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters);
         var dropoffInside = IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters);
-        if (!pickupInside || !dropoffInside)
+        // At least one end of the trip must be within the operational zone.
+        // This allows rides from the city to campus (pickup outside, dropoff inside)
+        // and rides from campus to the city (pickup inside, dropoff outside).
+        if (!pickupInside && !dropoffInside)
         {
-            throw new InvalidOperationException($"Pickup and drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
+            throw new InvalidOperationException($"At least one of the pickup or drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
         }
 
         // Use OSRM for true road-network distance (falls back to Haversine on failure)
@@ -112,7 +117,7 @@ public class RideService : IRideService
             Id = Guid.NewGuid().ToString(),
             StudentId = studentId,
             ServiceType = request.ServiceType,
-            Details = request.Details.GetRawText(),
+            Details = request.Details.HasValue ? request.Details.Value.GetRawText() : "{}",
             Status = RideRequestStatus.Pending,
             PickupLocation = pickup,
             DropoffLocation = dropoff,
@@ -208,6 +213,11 @@ public class RideService : IRideService
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+
+            // Load Student and Rider references for SignalR payload & summary
+            await _dbContext.Entry(lockedRide).Reference(r => r.Student).LoadAsync(cancellationToken);
+            await _dbContext.Entry(lockedRide).Reference(r => r.Rider).LoadAsync(cancellationToken);
+
             await _rideNotificationService.NotifyStateChangeAsync(lockedRide, cancellationToken);
 
             return MapSummary(lockedRide);
@@ -537,7 +547,7 @@ public class RideService : IRideService
         };
     }
 
-    public async Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 5000, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<RideSummaryDto>> GetNearbyRequestsAsync(string riderId, double latitude, double longitude, double radiusMeters = 20000, CancellationToken cancellationToken = default)
     {
         var riderStatus = await _dbContext.RiderStatuses.FirstOrDefaultAsync(rs => rs.RiderId == riderId, cancellationToken);
         if (riderStatus == null || !riderStatus.IsOnline || riderStatus.ApprovalStatus != RiderApprovalStatus.Approved)
@@ -548,6 +558,7 @@ public class RideService : IRideService
         var point = CreatePoint(longitude, latitude);
 
         var pendingRides = await _dbContext.RideRequests
+            .Include(r => r.Student)
             .Where(r => r.Status == RideRequestStatus.Pending)
             .Where(r => r.PickupLocation.Distance(point) <= radiusMeters)
             .OrderBy(r => r.PickupLocation.Distance(point))
@@ -569,9 +580,12 @@ public class RideService : IRideService
         var pickup = CreatePoint(pickupLng, pickupLat);
         var dropoff = CreatePoint(dropoffLng, dropoffLat);
 
-        if (!IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters) || !IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters))
+        var pickupInRange  = IsWithinFacultyRadius(pickup, _rideSettings.AllowedRadiusMeters);
+        var dropoffInRange = IsWithinFacultyRadius(dropoff, _rideSettings.AllowedRadiusMeters);
+        // At least one end of the trip must be within the operational zone.
+        if (!pickupInRange && !dropoffInRange)
         {
-            throw new InvalidOperationException($"Pickup and drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
+            throw new InvalidOperationException($"At least one of the pickup or drop-off points must be within the {_rideSettings.AllowedRadiusMeters / 1000.0:F0} km operational boundary.");
         }
 
         // Use OSRM for true road-network distance (falls back to Haversine on failure)
@@ -656,8 +670,11 @@ public class RideService : IRideService
     {
         var ride = await GetRideOwnedByRiderAsync(riderId, rideId, cancellationToken);
 
-        if(ride.Status != RideRequestStatus.InProgress)
-            throw new InvalidOperationException("Ride must be in progress to mark as complete.");
+        if (ride.Status != RideRequestStatus.InProgress)
+        {
+            throw new InvalidOperationException(
+                $"Ride cannot be marked complete because its current status is '{ride.Status}'. The ride must be 'InProgress' (OTP must be verified first).");
+        }
 
         ride.Status = RideRequestStatus.CompletedByRider;
         ride.UpdatedAt = DateTime.UtcNow;
@@ -690,6 +707,8 @@ public class RideService : IRideService
     public async Task<(bool success, string? error)> StudentConfirmCompleteAsync(string studentId, string rideId, CancellationToken cancellationToken = default)
     {
         var ride = await _dbContext.RideRequests
+            .Include(r => r.Student)
+            .Include(r => r.Rider)
             .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
 
         if (ride is null || ride.StudentId != studentId)
@@ -755,6 +774,8 @@ public class RideService : IRideService
     public async Task<RideSummaryDto?> GetRideStatusAsync(string userId, string rideId, CancellationToken cancellationToken = default)
     {
         var ride = await _dbContext.RideRequests
+            .Include(r => r.Student)
+            .Include(r => r.Rider)
             .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken);
 
         if (ride is null) return null;
@@ -767,7 +788,8 @@ public class RideService : IRideService
 
     private async Task<RideRequest> GetRideOwnedByRiderAsync(string riderId, string rideId, CancellationToken cancellationToken)
     {
-        var ride = await _dbContext.RideRequests.FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
+        var ride = await _dbContext.RideRequests
+            .FirstOrDefaultAsync(r => r.Id == rideId, cancellationToken)
             ?? throw new InvalidOperationException("Ride request not found.");
         if (ride.RiderId != riderId)
         {
@@ -785,7 +807,13 @@ public class RideService : IRideService
             Status = ride.Status,
             ServiceType = ride.ServiceType,
             StudentId = ride.StudentId,
+            StudentName = ride.Student?.Username,
+            StudentPhoneNumber = ride.Student?.MobileNumber,
+            StudentProfilePictureUrl = ride.Student?.ProfilePictureUrl,
             RiderId = ride.RiderId,
+            RiderName = ride.Rider?.Username,
+            RiderPhoneNumber = ride.Rider?.MobileNumber,
+            RiderProfilePictureUrl = ride.Rider?.ProfilePictureUrl,
             EstimatedFare = ride.EstimatedFare,
             DistanceKm = ride.CalculatedDistance,
             // PostGIS uses (X=Longitude, Y=Latitude) convention

@@ -14,11 +14,13 @@ public class RideController : ControllerBase
 {
     private readonly IRideService _rideService;
     private readonly IFcmTokenService _fcmTokenService;
+    private readonly ILogger<RideController> _logger;
 
-    public RideController(IRideService rideService, IFcmTokenService fcmTokenService)
+    public RideController(IRideService rideService, IFcmTokenService fcmTokenService, ILogger<RideController> logger)
     {
         _rideService = rideService;
         _fcmTokenService = fcmTokenService;
+        _logger = logger;
     }
 
     // ─── FCM Device Token ────────────────────────────────────────────────────────
@@ -179,13 +181,14 @@ public class RideController : ControllerBase
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Failed to create ride request: {Message}", ex.Message);
             return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
         }
     }
 
     [HttpGet("requests/nearby")]
     [Authorize(Policy = "RequireRider")] // Only riders can see nearby requests
-    public async Task<IActionResult> GetNearbyRequests([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] double radiusMeters = 5000, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetNearbyRequests([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] double radiusMeters = 20000, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -215,10 +218,12 @@ public class RideController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
+            _logger.LogWarning(ex, "Accept forbidden for ride {RideId}", request.RideId);
             return Forbid(ex.Message);
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Accept failed for ride {RideId}: {Message}", request.RideId, ex.Message);
             return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
         }
     }
@@ -235,10 +240,12 @@ public class RideController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
+            _logger.LogWarning(ex, "Arrive forbidden for ride {RideId}", request.RideId);
             return Forbid(ex.Message);
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Arrive failed for ride {RideId}: {Message}", request.RideId, ex.Message);
             return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
         }
     }
@@ -251,14 +258,16 @@ public class RideController : ControllerBase
         {
             var riderId = RequireUserId();
             var result = await _rideService.VerifyAsync(riderId, request.RideId, request.Otp, cancellationToken);
-            return Ok(ApiResponse<RideSummaryDto>.SuccessResponse("Ride completed.", result));
+            return Ok(ApiResponse<RideSummaryDto>.SuccessResponse("OTP verified. Ride started.", result));
         }
         catch (UnauthorizedAccessException ex)
         {
+            _logger.LogWarning(ex, "Verify forbidden for ride {RideId}", request.RideId);
             return Forbid(ex.Message);
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Verify failed for ride {RideId}: {Message}", request.RideId, ex.Message);
             return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
         }
     }
@@ -275,8 +284,16 @@ public class RideController : ControllerBase
             return Ok(ApiResponse<RideSummaryDto>.SuccessResponse(
                 "Ride marked complete. Waiting for student confirmation.", result));
         }
-        catch (UnauthorizedAccessException ex) {return Forbid(ex.Message);}
-        catch (Exception ex) {return BadRequest(ApiResponse<object>.FailResponse(ex.Message));}
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "RiderComplete forbidden for ride {RideId}", request.RideId);
+            return Forbid(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RiderComplete failed for ride {RideId}: {Message}", request.RideId, ex.Message);
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
     }
 
     [HttpPost("student-confirm")]
@@ -291,11 +308,18 @@ public class RideController : ControllerBase
                 studentId, request.RideId, cancellationToken);
 
             if (!success)
+            {
+                _logger.LogWarning("StudentConfirm rejected for ride {RideId}: {Error}", request.RideId, error);
                 return BadRequest(ApiResponse<object>.FailResponse(error!));
+            }
 
             return Ok(ApiResponse<object>.SuccessResponse("Ride completed.", null));
         }
-        catch (Exception ex) {return BadRequest(ApiResponse<object>.FailResponse(ex.Message));}
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "StudentConfirm failed for ride {RideId}: {Message}", request.RideId, ex.Message);
+            return BadRequest(ApiResponse<object>.FailResponse(ex.Message));
+        }
     }
 
 

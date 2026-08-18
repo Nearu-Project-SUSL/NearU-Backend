@@ -10,6 +10,6 @@ namespace NearU_Backend_Revised.Constants
         public const int OtpExpiryMinutes = 10;
         public const int CancellationWindowSeconds = 60;
         public const decimal CancellationPenalty = 20.0m;
-        public const int AllowedRadiusMeters = 5000;
+        public const int AllowedRadiusMeters = 20000;
     }
 }

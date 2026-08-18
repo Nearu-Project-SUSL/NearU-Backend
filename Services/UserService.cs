@@ -28,11 +28,12 @@ namespace NearU_Backend_Revised.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly IHubContext<RidesHub> _hubContext;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<UserService> _logger;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Code, DateTime Expiry)> _resetCodes = new();
 
         public UserService(
-            UserRepository userrepo, 
+            UserRepository userrepo,
             ITokenService tokenService,
             IRefreshTokenRepository refreshTokenRepo,
             IOptions<JwtSettings> jwtSettings,
@@ -40,7 +41,8 @@ namespace NearU_Backend_Revised.Services
             IEmailService emailService,
             ApplicationDbContext dbContext,
             IHubContext<RidesHub> hubContext,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<UserService> logger)
         {
             _userRepo = userrepo;
             _tokenService = tokenService;
@@ -51,12 +53,56 @@ namespace NearU_Backend_Revised.Services
             _dbContext = dbContext;
             _hubContext = hubContext;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<User> Register(RegisterRequest request)
         {
             var existingUser = await _userRepo.GetUserByEmail(request.Email);
-            if (existingUser != null) throw new Exception("User already exists");
+            if (existingUser != null)
+            {
+                // Self-healing: If user exists as Business but has no application (e.g. from an earlier failed attempt), create the application for them
+                if (existingUser.Role == "Business")
+                {
+                    var existingApp = await _dbContext.BusinessApplications.FirstOrDefaultAsync(a => a.UserId == existingUser.Id);
+                    if (existingApp == null)
+                    {
+                        if (string.IsNullOrWhiteSpace(request.BusinessType) ||
+                            string.IsNullOrWhiteSpace(request.BusinessName) ||
+                            string.IsNullOrWhiteSpace(request.OwnerName))
+                        {
+                            throw new Exception("BusinessType, BusinessName, and OwnerName are required for business registration.");
+                        }
+
+                        var allowedTypes = new[] { "Food", "Accommodation", "CustomGifts" };
+                        if (!allowedTypes.Contains(request.BusinessType, StringComparer.OrdinalIgnoreCase))
+                        {
+                            throw new Exception($"BusinessType must be one of: {string.Join(", ", allowedTypes)}");
+                        }
+
+                        var app = new BusinessApplication
+                        {
+                            Id           = Guid.NewGuid().ToString(),
+                            UserId       = existingUser.Id,
+                            BusinessType = request.BusinessType,
+                            BusinessName = request.BusinessName,
+                            OwnerName    = request.OwnerName,
+                            Phone        = request.MobileNumber ?? existingUser.MobileNumber ?? string.Empty,
+                            Address      = request.Address      ?? existingUser.Address      ?? string.Empty,
+                            Description  = request.Description  ?? string.Empty,
+                            Status       = "Pending",
+                            SubmittedAt  = DateTime.UtcNow
+                        };
+
+                        _dbContext.BusinessApplications.Add(app);
+                        await _dbContext.SaveChangesAsync();
+
+                        return existingUser;
+                    }
+                }
+
+                throw new Exception("User already exists");
+            }
 
             // Service-layer guard: Admin accounts cannot be created via self-registration.
             // The DTO regex already blocks this, but we enforce it here too for defense-in-depth.
@@ -111,13 +157,53 @@ namespace NearU_Backend_Revised.Services
                     OwnerName    = request.OwnerName,
                     Phone        = request.MobileNumber ?? string.Empty,
                     Address      = request.Address      ?? string.Empty,
+                    Description  = request.Description  ?? string.Empty,
                     Status       = "Pending",
                     SubmittedAt  = DateTime.UtcNow
                 };
 
-                _dbContext.BusinessApplications.Add(application);
-                await _dbContext.SaveChangesAsync();
+                try
+                {
+                    _dbContext.BusinessApplications.Add(application);
+                    await _dbContext.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "EF Core SaveChanges for BusinessApplication failed, executing raw SQL fallback...");
 
+                    try
+                    {
+                        await _dbContext.Database.ExecuteSqlRawAsync(@"
+                            CREATE TABLE IF NOT EXISTS ""BusinessApplications"" (
+                                ""Id"" text NOT NULL,
+                                ""UserId"" text NOT NULL,
+                                ""BusinessType"" text NOT NULL,
+                                ""BusinessName"" text NOT NULL,
+                                ""OwnerName"" text NOT NULL,
+                                ""Phone"" text NOT NULL,
+                                ""Address"" text NOT NULL,
+                                ""Description"" text NOT NULL,
+                                ""Status"" text NOT NULL DEFAULT 'Pending',
+                                ""SubmittedAt"" timestamp with time zone NOT NULL,
+                                CONSTRAINT ""PK_BusinessApplications"" PRIMARY KEY (""Id"")
+                            );
+                        ");
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""RegistrationNumber"" DROP NOT NULL;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""ApplicationDataJson"" DROP NOT NULL;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP DEFAULT;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" DROP IDENTITY IF EXISTS;"); } catch { }
+                        try { await _dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""BusinessApplications"" ALTER COLUMN ""Id"" TYPE text USING ""Id""::text;"); } catch { }
+                    }
+                    catch { }
+
+                    await _dbContext.Database.ExecuteSqlRawAsync(@"
+                        INSERT INTO ""BusinessApplications"" (""Id"", ""UserId"", ""BusinessType"", ""BusinessName"", ""OwnerName"", ""Phone"", ""Address"", ""Description"", ""Status"", ""SubmittedAt"")
+                        VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9});
+                    ",
+                    application.Id, application.UserId, application.BusinessType, application.BusinessName,
+                    application.OwnerName, application.Phone, application.Address, application.Description,
+                    application.Status, application.SubmittedAt);
+                }
             }
 
             // FIX: Initialize RiderStatus immediately upon registration
@@ -133,7 +219,7 @@ namespace NearU_Backend_Revised.Services
                 _dbContext.RiderStatuses.Add(riderStatus);
                 await _dbContext.SaveChangesAsync();
 
-                // Method A: Email Notification to Admins via SendGrid
+                // Method A: Email Notification to Admins via Resend
                 try
                 {
                     var adminEmail = _configuration["AdminSeed:Email"] ?? "admin@nearusab.me";
@@ -181,8 +267,8 @@ namespace NearU_Backend_Revised.Services
                 }
                 catch (Exception ex)
                 {
-                    // Catch exception to make sure failing email doesn't crash rider registration.
-                    Console.WriteLine($"[Email Service Error] Failed to send admin email: {ex.Message}");
+                    // Non-fatal: email failure must not abort registration.
+                    _logger.LogWarning(ex, "Failed to send admin notification email for new rider userId={UserId}.", user.Id);
                 }
 
                 // Method B: SignalR Broadcast to Admin Console
@@ -199,8 +285,8 @@ namespace NearU_Backend_Revised.Services
                 }
                 catch (Exception ex)
                 {
-                    // Catch exception to prevent SignalR disconnects from crashing registration.
-                    Console.WriteLine($"[SignalR Error] Failed to broadcast admin alert: {ex.Message}");
+                    // Non-fatal: SignalR failure must not abort registration.
+                    _logger.LogWarning(ex, "Failed to broadcast SignalR admin alert for new rider userId={UserId}.", user.Id);
                 }
             }
 
@@ -213,17 +299,26 @@ namespace NearU_Backend_Revised.Services
         public async Task<AuthResponse> Login(LoginRequest request)
         {
             var user = await _userRepo.GetUserByEmail(request.Email);
+
+            // Validate credentials — use the same generic message to prevent user-enumeration.
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                throw new Exception("Invalid credentials");
+                throw new UnauthorizedAccessException("Invalid credentials");
+
+            // Guard: deactivated / suspended accounts cannot log in.
+            if (user.IsActive != 1)
+                throw new UnauthorizedAccessException("Your account has been deactivated. Please contact support.");
+
+            // Track last login
+            user.LastLoginDate = DateTime.UtcNow.ToString("o");
+            await _userRepo.UpdateUserAsync(user);
 
             // Generate access token
             var accessToken = _tokenService.GenerateAccessToken(user);
 
-            // Generate refresh token
+            // Generate and persist refresh token
             var refreshToken = _tokenService.GenerateRefreshToken(user.Id);
             await _refreshTokenRepo.SaveRefreshTokenAsync(refreshToken);
 
-            // Build response
             return new AuthResponse
             {
                 UserId = user.Id,
@@ -257,19 +352,28 @@ namespace NearU_Backend_Revised.Services
             
             if (user == null)
             {
-                // Create user if not exists
+                // Create user on first Google login
                 user = new User
                 {
                     Id = Guid.NewGuid().ToString(),
                     Username = payload.Name ?? payload.Email.Split('@')[0],
                     Email = payload.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random placeholder
                     Role = "Student", // Default role
                     CreatedDate = DateTime.UtcNow.ToString("o"),
                     IsActive = 1
                 };
                 await _userRepo.AddUser(user);
             }
+            else if (user.IsActive != 1)
+            {
+                // Guard: deactivated accounts cannot log in via Google either.
+                throw new UnauthorizedAccessException("Your account has been deactivated. Please contact support.");
+            }
+
+            // Track last login
+            user.LastLoginDate = DateTime.UtcNow.ToString("o");
+            await _userRepo.UpdateUserAsync(user);
 
             // Generate access token
             var accessToken = _tokenService.GenerateAccessToken(user);

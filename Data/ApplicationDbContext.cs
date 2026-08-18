@@ -32,6 +32,13 @@ namespace NearU_Backend_Revised.Data
 
         public DbSet<GiftShop> GiftShops { get; set; } = null!;
         public DbSet<GiftProduct> GiftProducts { get; set; } = null!;
+        public DbSet<Deal> Deals { get; set; } = null!;
+
+        public DbSet<TukTukDriver> TukTukDrivers { get; set; }
+        public DbSet<BusRoute> BusRoutes { get; set; }
+        public DbSet<TrainRoute> TrainRoutes { get; set; }
+        public DbSet<Photographer> Photographers { get; set; } = null!;
+        public DbSet<PhotographyPackage> PhotographyPackages { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -460,6 +467,136 @@ namespace NearU_Backend_Revised.Data
                 entity.HasIndex(j => j.IsNew);
                 entity.HasIndex(j => j.CreatedAt);
                 entity.HasIndex(j => j.PostedByUserId);
+            });
+
+            // Configure Deal entity
+            modelBuilder.Entity<Deal>(entity =>
+            {
+                entity.HasKey(d => d.Id);
+
+                entity.Property(d => d.ShopName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(d => d.ShopType)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(d => d.Title)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(d => d.Description)
+                    .IsRequired()
+                    .HasMaxLength(1000);
+
+                entity.Property(d => d.BadgeText)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(d => d.BadgeColor)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(d => d.ImageUrl)
+                    .HasMaxLength(500);
+
+                entity.Property(d => d.ApprovalStatus)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasDefaultValue("Pending");
+
+                entity.Property(d => d.RejectionReason)
+                    .HasMaxLength(500);
+
+                entity.Property(d => d.CreatedAt)
+                    .IsRequired();
+
+                entity.HasOne(d => d.SubmittedByUser)
+                    .WithMany()
+                    .HasForeignKey(d => d.SubmittedByUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(d => d.SubmittedByUserId);
+            });
+
+            // Configure Photographer entity
+            modelBuilder.Entity<Photographer>(entity =>
+            {
+                entity.HasKey(p => p.Id);
+
+                entity.Property(p => p.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Bio)
+                    .HasMaxLength(500);
+
+                entity.Property(p => p.BaseRatePerHour)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(p => p.LocationName)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Phone)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(p => p.Email)
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.ImageUrl)
+                    .HasMaxLength(500);
+
+                entity.Property(p => p.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(p => p.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(p => p.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(p => p.Owner)
+                    .WithMany()
+                    .HasForeignKey(p => p.OwnerId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                entity.HasIndex(p => p.OwnerId);
+            });
+
+            // Configure PhotographyPackage entity
+            modelBuilder.Entity<PhotographyPackage>(entity =>
+            {
+                entity.HasKey(pp => pp.Id);
+
+                entity.Property(pp => pp.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(pp => pp.Price)
+                    .HasColumnType("numeric(18,2)");
+
+                entity.Property(pp => pp.Description)
+                    .HasMaxLength(300);
+
+                entity.Property(pp => pp.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(pp => pp.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(pp => pp.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasOne(pp => pp.Photographer)
+                    .WithMany(p => p.Packages)
+                    .HasForeignKey(pp => pp.PhotographerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(pp => pp.PhotographerId);
             });
         }
     }

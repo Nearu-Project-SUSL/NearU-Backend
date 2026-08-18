@@ -11,7 +11,7 @@ services:
     container_name: nearu-db
     restart: always
     ports:
-      - "54321:5432" # Exposed for team access as requested
+      - "127.0.0.1:54321:5432" # Closed to public internet, accessible only via SSH tunnel
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -40,6 +40,8 @@ services:
     image: ghcr.io/nearu-project-susl/nearu-backend:latest
     container_name: nearu-api
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       - nearu-db
       - nearu-redis
@@ -54,14 +56,20 @@ services:
       - JwtSettings__Audience=NearU-Client
       - JwtSettings__AccessTokenExpiryInMinutes=15
       - JwtSettings__RefreshTokenExpiryInDays=7
-      - ImageKit__PublicKey=${IMAGEKIT_PUBLIC_KEY}
-      - ImageKit__PrivateKey=${IMAGEKIT_PRIVATE_KEY}
-      - ImageKit__UrlEndpoint=${IMAGEKIT_URL_ENDPOINT}
+      # ── AWS S3 Image Storage ───────────────────────────────────────────────
+      - AWS__AccessKey=${AWS__AccessKey}
+      - AWS__SecretKey=${AWS__SecretKey}
+      - AWS__BucketName=${AWS__BucketName}
+      - AWS__Region=${AWS__Region}
+      # ─────────────────────────────────────────────────────────────────────
       - Firebase__CredentialsPath=/app/firebase-adminsdk.json
-      - SendGrid__ApiKey=${SendGrid__ApiKey}
-      - SendGrid__FromEmail=${SendGrid__FromEmail}
+      - Resend__ApiKey=${Resend__ApiKey}
+      - Resend__FromEmail=${Resend__FromEmail:-onboarding@resend.dev}
       - AdminSeed__Email=${AdminSeed__Email}
+      - AdminSeed__Username=${AdminSeed__Username:-NearU Admin}
+      - AdminSeed__Password=${AdminSeed__Password}
       # ── OSRM ──────────────────────────────────────────────────────────────
+      # Note: Make sure port matches nearu-osrm internal container port (usually 5000)
       - OsrmSettings__BaseUrl=http://nearu-osrm:5000
       - OsrmSettings__Profile=driving
       - OsrmSettings__TimeoutSeconds=5
@@ -72,8 +80,6 @@ services:
     networks:
       - nearu-internal
       - nearu-proxy
-    # Note: Healthcheck is removed because .NET "Chiseled" images
-    # do not contain 'curl' or a shell to run the test.
 
   dozzle:
     container_name: dozzle
@@ -87,6 +93,22 @@ services:
     environment:
       - DOZZLE_LEVEL=info
       - DOZZLE_HOSTNAME=NearU-Dev-Droplet
+    networks:
+      - nearu-internal
+      - nearu-proxy
+
+  nearu-nginx:
+    image: nginx:alpine
+    container_name: nearu-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
     networks:
       - nearu-internal
       - nearu-proxy
