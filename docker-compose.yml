@@ -1,0 +1,124 @@
+services:
+  nearu-redis:
+    image: redis:7-alpine
+    container_name: nearu-redis
+    restart: always
+    networks:
+      - nearu-internal
+
+  nearu-db:
+    image: postgis/postgis:17-3.5-alpine
+    container_name: nearu-db
+    restart: always
+    ports:
+      - "127.0.0.1:54321:5432" # Closed to public internet, accessible only via SSH tunnel
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - nearu_db_data:/var/lib/postgresql/data
+    networks:
+      - nearu-internal
+
+  # ── OSRM routing engine ───────────────────────────────────────────────────
+  # Map data must be pre-processed on the VPS before first run — see README.
+  # Pre-processed files live in /etc/nearu/osrm/ on the host.
+  nearu-osrm:
+    image: ghcr.io/project-osrm/osrm-backend@sha256:8430397015356b10f4259d06f927c07b9b5bc3332ff86d3e4ae8b83656313db3
+    container_name: nearu-osrm
+    restart: always
+    command: osrm-routed --algorithm mld /data/sri-lanka-latest.osrm --max-table-size 1000
+    volumes:
+      - /etc/nearu/osrm:/data:ro   # read-only: processed map files
+    networks:
+      - nearu-internal
+    # Not exposed to the internet — only reachable by the API container
+    # ─────────────────────────────────────────────────────────────────────────
+
+  api:
+    image: ghcr.io/nearu-project-susl/nearu-backend:latest
+    container_name: nearu-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - nearu-db
+      - nearu-redis
+      - nearu-osrm
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__PostgreSQL=Host=nearu-db;Port=5432;Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__Redis=nearu-redis:6379
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=https://api.nearusab.me
+      - JwtSettings__Audience=NearU-Client
+      - JwtSettings__AccessTokenExpiryInMinutes=15
+      - JwtSettings__RefreshTokenExpiryInDays=7
+      # ── AWS S3 Image Storage ───────────────────────────────────────────────
+      - AWS__AccessKey=${AWS__AccessKey}
+      - AWS__SecretKey=${AWS__SecretKey}
+      - AWS__BucketName=${AWS__BucketName}
+      - AWS__Region=${AWS__Region}
+      # ─────────────────────────────────────────────────────────────────────
+      - Firebase__CredentialsPath=/app/firebase-adminsdk.json
+      - Resend__ApiKey=${Resend__ApiKey}
+      - Resend__FromEmail=${Resend__FromEmail:-onboarding@resend.dev}
+      - AdminSeed__Email=${AdminSeed__Email}
+      - AdminSeed__Username=${AdminSeed__Username:-NearU Admin}
+      - AdminSeed__Password=${AdminSeed__Password}
+      # ── OSRM ──────────────────────────────────────────────────────────────
+      # Note: Make sure port matches nearu-osrm internal container port (usually 5000)
+      - OsrmSettings__BaseUrl=http://nearu-osrm:5000
+      - OsrmSettings__Profile=driving
+      - OsrmSettings__TimeoutSeconds=5
+      - OsrmSettings__ThrowOnFailure=false
+      # ──────────────────────────────────────────────────────────────────────
+    volumes:
+      - /etc/nearu/firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
+    networks:
+      - nearu-internal
+      - nearu-proxy
+
+  dozzle:
+    container_name: dozzle
+    image: amir20/dozzle:latest
+    restart: unless-stopped
+    volumes:
+      # Mount the host docker socket as Read-Only (:ro) so Dozzle can stream logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    environment:
+      - DOZZLE_LEVEL=info
+      - DOZZLE_HOSTNAME=NearU-Dev-Droplet
+    networks:
+      - nearu-internal
+      - nearu-proxy
+
+  nearu-nginx:
+    image: nginx:alpine
+    container_name: nearu-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
+    networks:
+      - nearu-internal
+      - nearu-proxy
+
+networks:
+  nearu-internal:
+    driver: bridge
+  nearu-proxy:
+    external: true
+    name: nearu-backend_nearu-proxy # Matches your existing Nginx network
+
+volumes:
+  nearu_db_data:

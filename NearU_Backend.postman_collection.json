@@ -1,0 +1,924 @@
+{
+    "info": {
+        "_postman_id": "nearu-backend-collection",
+        "name": "NearU Backend API",
+        "description": "API collection for testing NearU Backend services including Authentication, FoodShops, and MenuItems.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"user_{{$timestamp}}\",\n  \"email\": \"user_{{$timestamp}}@test.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"Student\",\n  \"mobileNumber\": \"0771234567\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 201\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                                    "});",
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.success && jsonData.data) {",
+                                    "    try {",
+                                    "        var reqBody = JSON.parse(pm.request.body.raw);",
+                                    "        pm.collectionVariables.set(\"registeredEmail\", reqBody.email);",
+                                    "    } catch (e) {}",
+                                    "    if (jsonData.data.userId) {",
+                                    "        pm.collectionVariables.set(\"userId\", jsonData.data.userId);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                                    "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                                    "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refreshToken);",
+                                    "    if (jsonData.data.userId) {",
+                                    "        pm.collectionVariables.set(\"userId\", jsonData.data.userId);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"Password123!\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.success && jsonData.data && jsonData.data.accessToken) {",
+                                    "    pm.collectionVariables.set(\"accessToken\", jsonData.data.accessToken);",
+                                    "    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refreshToken);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/refresh",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "refresh"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get User Profile",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{accessToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "{{userId}}"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is success (<400)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.below(400);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/logout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "logout"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 400/401\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "FoodShops (Draft)",
+            "item": [
+                {
+                    "name": "List Shops",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/foodshops",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "foodshops"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is success (<400)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.below(400);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Create Shop",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{accessToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Healthy Eats\",\n  \"description\": \"Fresh organic food\",\n  \"address\": \"123 Health St, City\",\n  \"phoneNumber\": \"555-0199\",\n  \"photoUrl\": \"https://example.com/shop.jpg\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/foodshops",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "foodshops"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 201 or 415/403 (Requires Business Role & multipart/form-data)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([201, 415, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "MenuItems (Draft)",
+            "item": [
+                {
+                    "name": "Get Menu for Shop",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/foodshops/1/menuItems",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "foodshops",
+                                "1",
+                                "menuItems"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is success (<400)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.below(400);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Create Menu Item",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{accessToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Green Salad\",\n  \"price\": 12.50,\n  \"description\": \"Fresh seasonal greens\",\n  \"photoUrl\": \"https://example.com/salad.jpg\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/foodshops/1/menuItems",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "foodshops",
+                                "1",
+                                "menuItems"
+                            ]
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 201 or 415/403 (Requires Business Role & multipart/form-data)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([201, 415, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Rides",
+            "item": [
+                {
+                    "request": {
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/rides/device-token",
+                            "path": [
+                                "api",
+                                "rides",
+                                "device-token"
+                            ]
+                        },
+                        "method": "POST",
+                        "body": {
+                            "raw": "{\"token\": \"sample-fcm-device-token\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            },
+                            "mode": "raw"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Register Device Token",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is success (<400)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.below(400);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/rides/device-token",
+                            "path": [
+                                "api",
+                                "rides",
+                                "device-token"
+                            ]
+                        },
+                        "method": "DELETE",
+                        "body": {
+                            "raw": "{\"token\": \"sample-fcm-device-token\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            },
+                            "mode": "raw"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Remove Device Token",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is success (<400)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.below(400);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/rides/active",
+                            "path": [
+                                "api",
+                                "rides",
+                                "active"
+                            ]
+                        },
+                        "header": [],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Get Active Ride",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 400 (No active ride)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 404]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "item": [
+                {
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/admin/riders",
+                            "path": [
+                                "api",
+                                "admin",
+                                "riders"
+                            ]
+                        },
+                        "header": [],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Get All Riders",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 403 (Forbidden for non-Admin)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "method": "PUT",
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/admin/riders/REPLACE_WITH_RIDER_ID/approve",
+                            "path": [
+                                "api",
+                                "admin",
+                                "riders",
+                                "REPLACE_WITH_RIDER_ID",
+                                "approve"
+                            ]
+                        },
+                        "header": [],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Approve Rider",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 403 (Forbidden for non-Admin)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "method": "PUT",
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/admin/riders/REPLACE_WITH_RIDER_ID/reject",
+                            "path": [
+                                "api",
+                                "admin",
+                                "riders",
+                                "REPLACE_WITH_RIDER_ID",
+                                "reject"
+                            ]
+                        },
+                        "header": [],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Reject Rider",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 403 (Forbidden for non-Admin)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "method": "PUT",
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/admin/riders/REPLACE_WITH_RIDER_ID/suspend",
+                            "path": [
+                                "api",
+                                "admin",
+                                "riders",
+                                "REPLACE_WITH_RIDER_ID",
+                                "suspend"
+                            ]
+                        },
+                        "header": [],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Suspend Rider",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 403 (Forbidden for non-Admin)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/admin/riders/REPLACE_WITH_RIDER_ID/tier",
+                            "path": [
+                                "api",
+                                "admin",
+                                "riders",
+                                "REPLACE_WITH_RIDER_ID",
+                                "tier"
+                            ]
+                        },
+                        "method": "PUT",
+                        "body": {
+                            "raw": "{\"tier\": \"Premium\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            },
+                            "mode": "raw"
+                        },
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Set Rider Tier",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 403 (Forbidden for non-Admin)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "raw": "{{baseUrl}}/api/admin/stats",
+                            "path": [
+                                "api",
+                                "admin",
+                                "stats"
+                            ]
+                        },
+                        "header": [],
+                        "auth": {
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "type": "string",
+                                    "value": "{{accessToken}}"
+                                }
+                            ],
+                            "type": "bearer"
+                        }
+                    },
+                    "name": "Get Platform Stats",
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200 or 403 (Forbidden for non-Admin)\", function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "https://api.nearusab.me",
+            "type": "string"
+        },
+        {
+            "key": "registeredEmail",
+            "value": "john@test.com",
+            "type": "string"
+        },
+        {
+            "key": "accessToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "refreshToken",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "userId",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}
